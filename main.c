@@ -1,3 +1,7 @@
+// A minimal test harness based on https://stackoverflow.com/a/19179564, for
+// the purpose of learning how the ioctl works so I can work it into the rest
+// of the Cloud Copycat Python code.
+
 #include <fcntl.h>
 #include <limits.h>
 #include <linux/cdrom.h>
