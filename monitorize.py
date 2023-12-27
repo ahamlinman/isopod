@@ -7,12 +7,22 @@
 # The next big thing would be to find the name of the disc, so we can use it to
 # name the resulting ISO.
 
-import os
+from enum import Enum
 from fcntl import ioctl
+import os
+
 from pyudev import Context, Monitor
 
 CDROM_DRIVE_STATUS = 0x5326
 CDSL_NONE = 2147483646
+
+
+class DriveStatus(Enum):
+    NO_INFO = 0
+    NO_DISC = 1
+    TRAY_OPEN = 2
+    DRIVE_NOT_READY = 3
+    DISC_OK = 4
 
 
 def main():
@@ -25,7 +35,12 @@ def main():
         fd = os.open(d.device_node, os.O_RDONLY | os.O_NONBLOCK)
         result = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE)
         os.close(fd)
-        print(result)
+
+        status = DriveStatus(result)
+        if status == DriveStatus.DISC_OK:
+            print(status, d.properties.get("ID_FS_LABEL", None))
+        else:
+            print(status)
 
 
 if __name__ == "__main__":
