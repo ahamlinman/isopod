@@ -2,7 +2,7 @@ from enum import Enum
 from fcntl import ioctl
 import os
 
-import cdrom.constants as _c
+from . import constants as _c
 
 
 class DriveStatus(Enum):
