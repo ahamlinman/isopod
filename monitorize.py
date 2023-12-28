@@ -13,16 +13,7 @@ import os
 
 from pyudev import Context, Monitor
 
-CDROM_DRIVE_STATUS = 0x5326
-CDSL_NONE = 2147483646
-
-
-class DriveStatus(Enum):
-    NO_INFO = 0
-    NO_DISC = 1
-    TRAY_OPEN = 2
-    DRIVE_NOT_READY = 3
-    DISC_OK = 4
+from constants import DriveStatus, CDROM_DRIVE_STATUS, CDSL_NONE
 
 
 def main():
