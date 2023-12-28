@@ -7,12 +7,8 @@
 # The next big thing would be to find the name of the disc, so we can use it to
 # name the resulting ISO.
 
-from fcntl import ioctl
-import os
-
+from cdrom import get_drive_status, DriveStatus
 from pyudev import Context, Monitor
-
-from constants import DriveStatus, CDROM_DRIVE_STATUS, CDSL_NONE
 
 
 def main():
@@ -22,11 +18,7 @@ def main():
         if not "sr" in (d.driver for d in d.ancestors):
             continue
 
-        fd = os.open(d.device_node, os.O_RDONLY | os.O_NONBLOCK)
-        result = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE)
-        os.close(fd)
-
-        status = DriveStatus(result)
+        status = get_drive_status(d.device_node)
         if status == DriveStatus.DISC_OK:
             print(status, d.properties.get("ID_FS_LABEL", None))
         else:

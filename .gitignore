@@ -1,3 +1,1 @@
-/build
-/constants.c
-/constants.*.so
+__pycache__
