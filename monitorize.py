@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 # A minimal test harness that combines udev monitoring of a CD/DVD drive with
-# the ioctl call from main.c. This is the sketch for how the Cloud Copycat can
-# figure out when to start copying a disc.
+# the ioctl call from main.c. This is the sketch for how the isopod terminal
+# can figure out when to start copying a disc.
 #
 # The next big thing would be to find the name of the disc, so we can use it to
 # name the resulting ISO.
