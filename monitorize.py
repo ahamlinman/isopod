@@ -7,7 +7,6 @@
 # The next big thing would be to find the name of the disc, so we can use it to
 # name the resulting ISO.
 
-from enum import Enum
 from fcntl import ioctl
 import os
 
