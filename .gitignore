@@ -1,6 +1,7 @@
 *.c
 *.so
 __pycache__
+/build
 /dist
 /*.egg-info
 /*.sqlite3
