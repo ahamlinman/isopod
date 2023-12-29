@@ -47,6 +47,7 @@ def main():
             print(isopod.store.list_discs(session))
 
     ripper = isopod.ripper.Controller()
+    ripper.reconcile()
 
     with isopod.store.Session() as session:
         print(isopod.store.list_discs(session))
