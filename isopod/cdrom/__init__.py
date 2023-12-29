@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from enum import Enum
 from fcntl import ioctl
 import os
@@ -15,15 +14,9 @@ class DriveStatus(Enum):
 
 
 def get_drive_status(device_node: str) -> DriveStatus:
-    with _open_raw(device_node, os.O_RDONLY | os.O_NONBLOCK) as fd:
+    fd = os.open(device_node, os.O_RDONLY | os.O_NONBLOCK)
+    try:
         result = ioctl(fd, _c.CDROM_DRIVE_STATUS, _c.CDSL_NONE)
         return DriveStatus(result)
-
-
-@contextmanager
-def _open_raw(path: str, flags: int):
-    fd = os.open(path, flags)
-    try:
-        yield fd
     finally:
         os.close(fd)

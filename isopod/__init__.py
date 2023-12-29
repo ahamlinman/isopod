@@ -1,6 +1,16 @@
+import sys
+
 from pyudev import Context, Monitor
 
 from isopod.cdrom import get_drive_status
+
+
+def status():
+    if len(sys.argv) < 2:
+        print("Need a device to check", file=sys.stderr)
+        return 1
+
+    print(get_drive_status(sys.argv[1]))
 
 
 def monitor():
