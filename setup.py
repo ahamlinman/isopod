@@ -1,14 +1,5 @@
-from setuptools import Extension, setup
+from setuptools import setup
 from Cython.Build import cythonize
 
 
-setup(
-    ext_modules=cythonize(
-        [
-            Extension(
-                name="isopod.cdrom.constants",
-                sources=["isopod/cdrom/constants.pyx"],
-            )
-        ]
-    )
-)
+setup(ext_modules=cythonize("isopod/cdrom/constants.pyx"))
