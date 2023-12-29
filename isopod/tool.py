@@ -3,7 +3,7 @@ import logging
 
 from pyudev import Context, Monitor
 
-from .cdrom import get_drive_status
+from isopod.cdrom import get_drive_status
 
 log = logging.getLogger(__name__)
 
