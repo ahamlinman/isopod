@@ -4,7 +4,7 @@
 # the ioctl call from main.c. This is the sketch for how the isopod terminal
 # can figure out when to start copying a disc.
 
-from cdrom import get_drive_status, DriveStatus
+from isopod.cdrom import get_drive_status, DriveStatus
 from pyudev import Context, Monitor
 
 
