@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 
-from isopod.registry import Registry
+from isopod.registry import Disc, DiscStatus, Registry
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -30,3 +30,5 @@ def main():
         return 1
 
     registry = Registry(args.db_path)
+    registry.put(Disc(name="ISOTEST", status=DiscStatus.RIPPABLE))
+    registry.put(Disc(name="ISOTEST", status=DiscStatus.SENDABLE))

@@ -2,7 +2,7 @@ import logging
 from enum import Enum, auto
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 # Work around SQLAlchemy adding their own handler for echo=True, even though we
 # already have one at the root.
@@ -31,3 +31,9 @@ class Registry:
         # TODO: Remove echo=True after initial debugging.
         self._engine = create_engine(f"sqlite+pysqlite:///{db_path}", echo=True)
         Base.metadata.create_all(self._engine)
+
+    def put(self, disc: Disc):
+        with Session(self._engine) as session:
+            session.merge(disc)
+            session.flush()
+            session.commit()
