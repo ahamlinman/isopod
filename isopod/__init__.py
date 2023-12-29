@@ -2,13 +2,20 @@ import argparse
 import logging
 import os
 
-from isopod.registry import Disc, DiscStatus, Registry
+from sqlalchemy import create_engine
+
+import isopod.store
+from isopod.store import Disc, DiscStatus
 
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
     datefmt="%F %T",
 )
+
+# Work around SQLAlchemy adding their own handler for echo=True, even though we
+# already have one at the root.
+logging.getLogger("sqlalchemy.engine.Engine").addHandler(logging.NullHandler())
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +36,10 @@ def main():
         log.critical("Not running as root")
         return 1
 
-    registry = Registry(args.db_path)
-    registry.put(Disc(name="ISOTEST", status=DiscStatus.RIPPABLE))
-    registry.put(Disc(name="ISOTEST", status=DiscStatus.SENDABLE))
+    engine = create_engine(f"sqlite+pysqlite:///{args.db_path}", echo=True)
+    isopod.store.Session.configure(bind=engine)
+    isopod.store.Base.metadata.create_all(engine)
+
+    with isopod.store.Session() as session:
+        with session.begin():
+            session.add(Disc(name="ISOTEST", status=DiscStatus.RIPPABLE))
