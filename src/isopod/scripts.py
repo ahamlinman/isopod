@@ -33,13 +33,10 @@ def monitor():
 
     context = Context()
     monitor = Monitor.from_netlink(context)
-    try:
-        for d in iter(monitor.poll, None):
-            if not "sr" in (d.driver for d in d.ancestors):
-                continue
+    for d in iter(monitor.poll, None):
+        if not "ID_CDROM" in d.properties:
+            continue
 
-            status = get_drive_status(d.device_node)
-            label = d.properties.get("ID_FS_LABEL", None)
-            log.info("%s %s %s", d.device_node, status, label)
-    except KeyboardInterrupt:
-        pass
+        status = get_drive_status(d.device_node)
+        label = d.properties.get("ID_FS_LABEL", None)
+        log.info("%s %s %s", d.device_node, status, label)
