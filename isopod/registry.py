@@ -34,6 +34,5 @@ class Registry:
 
     def put(self, disc: Disc):
         with Session(self._engine) as session:
-            session.merge(disc)
-            session.flush()
-            session.commit()
+            with session.begin():
+                session.merge(disc)
