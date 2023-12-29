@@ -3,13 +3,15 @@ import logging
 
 from pyudev import Context, Monitor
 
-from isopod.cdrom import get_drive_status
+from .cdrom import get_drive_status
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s %(levelname)-9s %(name)s: %(message)s",
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+    datefmt="%F %T",
 )
-log = logging.getLogger("isopod")
+
+log = logging.getLogger(__name__)
 
 
 def status():
@@ -18,7 +20,7 @@ def status():
         return 1
 
     try:
-        log.info(get_drive_status(sys.argv[1]))
+        log.info("%s", get_drive_status(sys.argv[1]))
     except:
         log.exception("Can't read drive status")
         return 1
@@ -33,4 +35,4 @@ def monitor():
 
         status = get_drive_status(d.device_node)
         label = d.properties.get("ID_FS_LABEL", None)
-        log.info(d.device_node, status, label)
+        log.info("%s %s %s", d.device_node, status, label)
