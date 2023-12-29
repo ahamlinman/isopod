@@ -17,6 +17,7 @@ classifiers = [
 
 [project.scripts]
 isopod = "isopod:main"
+isopod-list = "isopod.scripts:list"
 isopod-monitor = "isopod.scripts:monitor"
 isopod-status = "isopod.scripts:status"
 

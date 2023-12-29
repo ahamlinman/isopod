@@ -20,8 +20,11 @@ class DiscStatus(Enum):
 class Disc(Base):
     __tablename__ = "isopod_discs"
 
-    name: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str]
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
+    # TODO: Remove default for src_device.
+    src_device: Mapped[str] = mapped_column(default="/dev/cdrom")
 
     def __repr__(self):
         return f"Disc({self.name}, {self.status})"
@@ -42,6 +45,7 @@ def get_disc(session: Session, name: str) -> Disc:
     try:
         return session.execute(select(Disc).filter_by(name=name)).scalar_one()
     except NoResultFound:
-        disc = Disc(name=name, status=DiscStatus.RIPPABLE)
+        disc = Disc(name=name)
         session.add(disc)
+        session.flush()
         return disc

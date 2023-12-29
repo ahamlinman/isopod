@@ -43,11 +43,12 @@ def main():
     with isopod.store.Session() as session:
         with session.begin():
             disc = isopod.store.get_disc(session, "ISOTEST")
-            session.flush()
+            print(disc.status)
             print(isopod.store.list_discs(session))
 
     ripper = isopod.ripper.Controller()
-    ripper.reconcile()
+    ripper.start()
+    ripper.join()
 
     with isopod.store.Session() as session:
         print(isopod.store.list_discs(session))

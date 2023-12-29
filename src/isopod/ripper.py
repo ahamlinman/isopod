@@ -1,4 +1,8 @@
 import logging
+from dataclasses import dataclass
+from enum import Enum, auto
+from queue import Queue
+from threading import Thread
 
 from sqlalchemy import delete
 
@@ -7,18 +11,20 @@ from isopod.store import Disc, DiscStatus, Session
 log = logging.getLogger(__name__)
 
 
-class Controller:
+class EventKind(Enum):
+    DISC_BECAME_READY = auto()
+    DISC_BECAME_UNREADY = auto()
+    RIP_SUCCEEDED = auto()
+    RIP_FAILED = auto()
+
+
+@dataclass
+class Event:
+    kind: EventKind
+    device_path: str
+
+
+class Controller(Thread):
     def __init__(self):
-        self._maybe_stale = True
-
-    def reconcile(self):
-        if self._maybe_stale:
-            self._clear_stale_rips()
-            self._maybe_stale = False
-
-    def _clear_stale_rips(self):
-        with Session() as session:
-            # TODO: Actually delete the old files.
-            stmt = delete(Disc).filter_by(status=DiscStatus.RIPPABLE)
-            session.execute(stmt)
-            session.commit()
+        super().__init__()
+        self.events: Queue[Event] = Queue()
