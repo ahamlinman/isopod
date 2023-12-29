@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 authors = [{ name = "Alex Hamlin", email = "alex@alexhamlin.co" }]
 dependencies = [
   "pyudev>=0.24.1",
+  "SQLAlchemy>=2.0.24",
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
