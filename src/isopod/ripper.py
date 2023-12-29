@@ -28,3 +28,10 @@ class Controller(Thread):
     def __init__(self):
         super().__init__()
         self.events: Queue[Event] = Queue()
+
+
+# Create some kind of monitor thread that turns udev events into events that a
+# Controller knows how to handle. Start the udev monitor first, and then iterate
+# through all known devices to generate their initial events. I guess this
+# really implies two layers: one for udev and one for the mapping to the
+# controller.
