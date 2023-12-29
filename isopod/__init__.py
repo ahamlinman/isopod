@@ -36,10 +36,10 @@ def main():
         log.critical("Not running as root")
         return 1
 
-    engine = create_engine(f"sqlite+pysqlite:///{args.db_path}", echo=True)
-    isopod.store.Session.configure(bind=engine)
-    isopod.store.Base.metadata.create_all(engine)
-
+    isopod.store.setup(create_engine(f"sqlite+pysqlite:///{args.db_path}", echo=True))
     with isopod.store.Session() as session:
         with session.begin():
-            session.add(Disc(name="ISOTEST", status=DiscStatus.RIPPABLE))
+            session.merge(Disc(name="ISOTEST1", status=DiscStatus.SENDABLE))
+            session.merge(Disc(name="ISOTEST2", status=DiscStatus.RIPPABLE))
+            session.flush()
+            print(isopod.store.all(session))
