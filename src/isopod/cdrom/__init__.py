@@ -24,7 +24,7 @@ class DriveStatus(Enum):
     DISC_OK = CDS_DISC_OK
 
 
-def get_cdrom_devices() -> list[str]:
+def get_cdrom_device_paths() -> list[str]:
     return [
         d.device_node for d in Enumerator(Context()).match_property("ID_CDROM", "1")
     ]

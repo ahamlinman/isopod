@@ -3,7 +3,7 @@ import logging
 import click
 from pyudev import Context, Monitor
 
-from isopod.cdrom import get_cdrom_devices, get_drive_status, get_fs_label
+from isopod.cdrom import get_cdrom_device_paths, get_drive_status, get_fs_label
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -12,7 +12,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 @click.command(context_settings=context_settings)
 def list():
     """List all CD-ROM devices on the system."""
-    print(get_cdrom_devices())
+    print(get_cdrom_device_paths())
 
 
 @click.command(context_settings=context_settings)
