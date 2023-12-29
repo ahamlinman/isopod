@@ -1,15 +1,15 @@
+import os
 from enum import Enum
 from fcntl import ioctl
-import os
 
 from isopod.cdrom.constants import (
     CDROM_DRIVE_STATUS,
-    CDSL_NONE,
-    CDS_NO_INFO,
-    CDS_NO_DISC,
-    CDS_TRAY_OPEN,
-    CDS_DRIVE_NOT_READY,
     CDS_DISC_OK,
+    CDS_DRIVE_NOT_READY,
+    CDS_NO_DISC,
+    CDS_NO_INFO,
+    CDS_TRAY_OPEN,
+    CDSL_NONE,
 )
 
 
