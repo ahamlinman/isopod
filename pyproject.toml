@@ -3,14 +3,10 @@ name = "isopod"
 version = "0.0.1"
 description = "Rip ISOs to remote storage with minimal fuss"
 requires-python = ">=3.11"
+authors = [{ name = "Alex Hamlin", email = "alex@alexhamlin.co" }]
 classifiers = ["Programming Language :: Python :: 3"]
-
-[[project.authors]]
-name = "Alex Hamlin"
-email = "alex@alexhamlin.co"
-
-[project.scripts]
-isopod-monitor = "isopod:monitor"
+dependencies = ["pyudev>=0.24.1"]
+scripts = { isopod-monitor = "isopod:monitor" }
 
 [build-system]
 requires = ["setuptools>=61.0", "Cython>=3"]
