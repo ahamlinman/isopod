@@ -4,8 +4,14 @@ version = "0.0.1"
 description = "Rip ISOs to remote storage with minimal fuss"
 requires-python = ">=3.11"
 authors = [{ name = "Alex Hamlin", email = "alex@alexhamlin.co" }]
-classifiers = ["Programming Language :: Python :: 3"]
-dependencies = ["pyudev>=0.24.1"]
+dependencies = [
+  "pyudev>=0.24.1",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: System :: Archiving :: Backup",
+]
 
 [project.scripts]
 isopod = "isopod:main"
