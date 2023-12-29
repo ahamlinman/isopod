@@ -4,6 +4,7 @@ import os
 
 from sqlalchemy import create_engine
 
+import isopod.ripper
 import isopod.store
 from isopod.store import Disc, DiscStatus
 
@@ -41,8 +42,11 @@ def main():
 
     with isopod.store.Session() as session:
         with session.begin():
-            disc = isopod.store.get_disc(session, "ISOTEST4")
-            print(disc)
-            disc.status = DiscStatus.SENDABLE
+            disc = isopod.store.get_disc(session, "ISOTEST")
             session.flush()
             print(isopod.store.list_discs(session))
+
+    ripper = isopod.ripper.Controller()
+
+    with isopod.store.Session() as session:
+        print(isopod.store.list_discs(session))
