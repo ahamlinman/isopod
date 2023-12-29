@@ -1,26 +1,30 @@
 import logging
-import sys
 
+import click
 from pyudev import Context, Monitor
 
 from isopod.cdrom import get_drive_status
 
 log = logging.getLogger(__name__)
+context_settings = {"help_option_names": ["-h", "--help"]}
 
 
-def status():
-    if len(sys.argv) < 2:
-        log.fatal("Need a device to check")
-        return 1
+@click.command(context_settings=context_settings)
+@click.argument("device_path", type=click.Path(exists=True))
+def status(device_path):
+    """Print the status of the CD-ROM drive at DEVICE_PATH as seen by isopod.cdrom."""
 
     try:
-        log.info("%s", get_drive_status(sys.argv[1]))
+        log.info("%s", get_drive_status(device_path))
     except:
         log.exception("Can't read drive status")
         return 1
 
 
+@click.command(context_settings=context_settings)
 def monitor():
+    """Watch for udev events on CD-ROM drives and print the status as seen by isopod.cdrom."""
+
     context = Context()
     monitor = Monitor.from_netlink(context)
     try:

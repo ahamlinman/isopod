@@ -5,6 +5,7 @@ description = "Rip ISOs to remote storage with minimal fuss"
 requires-python = ">=3.11"
 authors = [{ name = "Alex Hamlin", email = "alex@alexhamlin.co" }]
 dependencies = [
+  "click>=8.1.7",
   "pyudev>=0.24.1",
   "SQLAlchemy>=2.0.24",
 ]
@@ -16,8 +17,8 @@ classifiers = [
 
 [project.scripts]
 isopod = "isopod:main"
-isopod-monitor = "isopod.tool:monitor"
-isopod-status = "isopod.tool:status"
+isopod-monitor = "isopod.scripts:monitor"
+isopod-status = "isopod.scripts:status"
 
 [build-system]
 requires = ["setuptools>=61.0", "Cython>=3"]
