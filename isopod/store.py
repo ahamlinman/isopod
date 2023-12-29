@@ -1,6 +1,7 @@
 from enum import Enum, auto
 
 from sqlalchemy import Engine, select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 Session = sessionmaker()
@@ -32,5 +33,15 @@ def setup(engine: Engine):
     Base.metadata.create_all(engine)
 
 
-def all(session: Session) -> list[Disc]:
+def list_discs(session: Session) -> list[Disc]:
+    # TODO: Consider keeping this an iterator.
     return list(session.scalars(select(Disc)).all())
+
+
+def get_disc(session: Session, name: str) -> Disc:
+    try:
+        return session.execute(select(Disc).filter_by(name=name)).scalar_one()
+    except NoResultFound:
+        disc = Disc(name=name, status=DiscStatus.RIPPABLE)
+        session.add(disc)
+        return disc
