@@ -8,6 +8,7 @@ classifiers = ["Programming Language :: Python :: 3"]
 dependencies = ["pyudev>=0.24.1"]
 
 [project.scripts]
+isopod = "isopod:main"
 isopod-monitor = "isopod.tool:monitor"
 isopod-status = "isopod.tool:status"
 
