@@ -3,7 +3,7 @@ import logging
 import click
 from pyudev import Context, Monitor
 
-from isopod.cdrom import get_drive_status
+from isopod.cdrom import get_drive_status, get_fs_label
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -15,7 +15,7 @@ def status(device_path):
     """Print the status of the CD-ROM drive at DEVICE_PATH as seen by isopod.cdrom."""
 
     try:
-        log.info("%s", get_drive_status(device_path))
+        log.info("%s %s", get_drive_status(device_path), get_fs_label(device_path))
     except:
         log.exception("Can't read drive status")
         return 1

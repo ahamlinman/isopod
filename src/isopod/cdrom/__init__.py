@@ -1,6 +1,9 @@
 import os
 from enum import Enum
 from fcntl import ioctl
+from typing import Optional
+
+from pyudev import Context, DeviceNotFoundError, Devices
 
 from isopod.cdrom.constants import (
     CDROM_DRIVE_STATUS,
@@ -21,10 +24,19 @@ class DriveStatus(Enum):
     DISC_OK = CDS_DISC_OK
 
 
-def get_drive_status(device_node: str) -> DriveStatus:
-    fd = os.open(device_node, os.O_RDONLY | os.O_NONBLOCK)
+def get_drive_status(device_path: str) -> DriveStatus:
+    fd = os.open(device_path, os.O_RDONLY | os.O_NONBLOCK)
     try:
         result = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE)
         return DriveStatus(result)
     finally:
         os.close(fd)
+
+
+def get_fs_label(device_path: str) -> Optional[str]:
+    try:
+        # TODO: Is a shared Context safe across threads?
+        dev = Devices.from_device_file(Context(), device_path)
+        return dev.properties.get("ID_FS_LABEL", None)
+    except DeviceNotFoundError:
+        return None
