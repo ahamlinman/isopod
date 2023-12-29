@@ -1,0 +1,14 @@
+[project]
+name = "isopod"
+version = "0.0.1"
+description = "Rip ISOs to remote storage with minimal fuss"
+requires-python = ">=3.11"
+classifiers = ["Programming Language :: Python :: 3"]
+
+[[project.authors]]
+name = "Alex Hamlin"
+email = "alex@alexhamlin.co"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
