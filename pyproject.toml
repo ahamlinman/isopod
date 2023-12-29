@@ -8,8 +8,8 @@ classifiers = ["Programming Language :: Python :: 3"]
 dependencies = ["pyudev>=0.24.1"]
 
 [project.scripts]
-isopod-monitor = "isopod:monitor"
-isopod-status = "isopod:status"
+isopod-monitor = "isopod.tool:monitor"
+isopod-status = "isopod.tool:status"
 
 [build-system]
 requires = ["setuptools>=61.0", "Cython>=3"]
