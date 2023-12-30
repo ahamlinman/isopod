@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -9,7 +10,9 @@ from typing import Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
 
+import isopod.store
 import isopod.udev
+from isopod.store import DiscStatus
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +92,11 @@ class Ripper(Thread):
         self.terminating = False
 
     def run(self):
+        with isopod.store.Session() as session:
+            disc = isopod.store.Disc(path=self.dst, status=DiscStatus.RIPPABLE)
+            session.add(disc)
+            session.commit()
+
         args = [
             "ddrescue",
             "--retry-passes=2",
@@ -105,11 +113,28 @@ class Ripper(Thread):
                 self.proc.terminate()
                 self.terminating = True
 
-            if self.proc.poll() is not None:
-                log.info("Ripper exited with status %d", self.proc.returncode)
-                self.terminal = True
-                self.terminating = True
-                return
+            if self.proc.poll() is None:
+                continue
+
+            log.info("Ripper exited with status %d", self.proc.returncode)
+            self.terminal = True
+            self.terminating = True
+
+            if self.proc.returncode == 0:
+                with isopod.store.Session() as session:
+                    disc.status = DiscStatus.SENDABLE
+                    session.merge(disc)
+                    session.commit()
+            else:
+                try:
+                    os.unlink(self.dst)
+                except FileNotFoundError:
+                    pass
+                with isopod.store.Session() as session:
+                    session.delete(disc)
+                    session.commit()
+
+            return
 
     def terminate(self):
         if not self.terminal:
