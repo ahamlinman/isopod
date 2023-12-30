@@ -48,7 +48,13 @@ def main():
 
     ripper = isopod.ripper.Controller()
     ripper.start()
-    ripper.join()
 
     with isopod.store.Session() as session:
         print(isopod.store.list_discs(session))
+
+    try:
+        ripper.join()
+    except KeyboardInterrupt:
+        log.info("Shutting down gracefully")
+        ripper.send_stop()
+        ripper.join()
