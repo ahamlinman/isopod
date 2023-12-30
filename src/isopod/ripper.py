@@ -12,8 +12,8 @@ log = logging.getLogger(__name__)
 
 
 class EventKind(Enum):
-    DISC_BECAME_READY = auto()
-    DISC_BECAME_UNREADY = auto()
+    DISC_LOADED = auto()
+    DISC_UNLOADED = auto()
     RIP_SUCCEEDED = auto()
     RIP_FAILED = auto()
 
@@ -42,21 +42,28 @@ class Controller(Thread):
             self._refresh_device(dev)
 
         log.info("Starting controller")
-        while event := self.events.get():
-            log.debug("Received event %s", event)
+        while evt := self.events.get():
+            match evt.kind:
+                case EventKind.DISC_LOADED:
+                    log.info("%s became ready", evt.device_path)
+                case EventKind.DISC_UNLOADED:
+                    log.info("%s became unready", evt.device_path)
+                case EventKind.RIP_SUCCEEDED:
+                    log.info("%s successfully ripped", evt.device_path)
+                case EventKind.RIP_FAILED:
+                    log.info("%s failed to rip", evt.device_path)
 
     def _refresh_device(self, dev: Device):
         path = dev.device_node
         last_label = self.disc_label_by_device.get(path)
-        last_ready = last_label is not None
-        next_ready = isopod.udev.is_cdrom_loaded(dev)
+        last_loaded = last_label is not None
+        next_loaded = isopod.udev.is_cdrom_loaded(dev)
 
-        if last_ready and not next_ready:
-            log.debug("Disc removed from %s", path)
+        if last_loaded and not next_loaded:
             del self.disc_label_by_device[path]
-            self.events.put(Event(EventKind.DISC_BECAME_UNREADY, path))
+            self.events.put(Event(EventKind.DISC_UNLOADED, path))
 
-        if not next_ready:
+        if not next_loaded:
             return
 
         next_label = isopod.udev.get_fs_label(dev)
@@ -65,10 +72,8 @@ class Controller(Thread):
             next_label = ""
 
         self.disc_label_by_device[path] = next_label
-        if next_ready and not last_ready:
-            log.debug("Disc inserted into %s", path)
-            self.events.put(Event(EventKind.DISC_BECAME_READY, path))
-        elif last_ready and next_ready and last_label != next_label:
-            log.debug("Disc replaced in %s", path)
-            self.events.put(Event(EventKind.DISC_BECAME_UNREADY, path))
-            self.events.put(Event(EventKind.DISC_BECAME_READY, path))
+        if not last_loaded:
+            self.events.put(Event(EventKind.DISC_LOADED, path))
+        elif last_loaded and last_label != next_label:
+            self.events.put(Event(EventKind.DISC_UNLOADED, path))
+            self.events.put(Event(EventKind.DISC_LOADED, path))
