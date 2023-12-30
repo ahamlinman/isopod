@@ -45,9 +45,9 @@ class Controller(Thread):
         while evt := self.events.get():
             match evt.kind:
                 case EventKind.DISC_LOADED:
-                    log.info("%s became ready", evt.device_path)
+                    log.info("%s loaded", evt.device_path)
                 case EventKind.DISC_UNLOADED:
-                    log.info("%s became unready", evt.device_path)
+                    log.info("%s unloaded", evt.device_path)
                 case EventKind.RIP_SUCCEEDED:
                     log.info("%s successfully ripped", evt.device_path)
                 case EventKind.RIP_FAILED:
