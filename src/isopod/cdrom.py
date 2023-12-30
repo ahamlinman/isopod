@@ -1,7 +1,23 @@
 from enum import Enum
+from threading import local
 from typing import Iterable, Optional
 
 from pyudev import Context, Device, DeviceNotFoundError, Devices, Enumerator
+
+
+class LocalContext(local):
+    def __init__(self):
+        self.ctx = Context()
+
+
+CTX = LocalContext()
+
+
+def get_drives() -> Iterable[Device]:
+    return Enumerator(CTX.ctx).match_property("ID_CDROM", "1")
+
+
+# old stuff follows
 
 
 class DriveStatus(Enum):
