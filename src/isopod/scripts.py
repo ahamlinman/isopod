@@ -4,7 +4,7 @@ import os
 import click
 from pyudev import Context, Monitor
 
-from isopod.cdrom import DriveStatus, get_drive_status, get_drives, get_fs_label
+import isopod.cdrom
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -19,12 +19,12 @@ def cli():
 @cli.command()
 def list():
     """List CD-ROM devices on the system."""
-    for dev in get_drives():
+    for dev in isopod.cdrom.get_drives():
         path = dev.device_node
-        if get_drive_status(path) == DriveStatus.DISC_OK:
-            print(f"{path}\t{get_fs_label(path)}")
+        if isopod.cdrom.is_drive_loaded(dev):
+            print(f"{path}\t{isopod.cdrom.get_label(dev)}")
         else:
-            print(dev.device_node)
+            print(path)
 
 
 @cli.command()
@@ -37,9 +37,9 @@ def monitor():
         if not "ID_CDROM" in d.properties:
             continue
 
-        status = get_drive_status(d.device_node)
+        loaded = isopod.cdrom.is_drive_loaded(d)
         label = d.properties.get("ID_FS_LABEL", None)
-        log.info("%s %s %s", d.device_node, status, label)
+        log.info("%s\t%s\t%s", d.device_node, loaded, label)
 
 
 @cli.command()
@@ -48,7 +48,12 @@ def status(device_path):
     """Print the status of the CD-ROM device at DEVICE_PATH."""
 
     try:
-        log.info("%s %s", get_drive_status(device_path), get_fs_label(device_path))
+        dev = isopod.cdrom.get_device(device_path)
+        log.info(
+            "%s %s",
+            isopod.cdrom.is_drive_loaded(dev),
+            isopod.cdrom.get_label(dev),
+        )
     except:
         log.exception("Can't read drive status")
         return 1

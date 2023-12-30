@@ -6,7 +6,7 @@ from threading import Thread
 
 from pyudev import Context, Device, Monitor, MonitorObserver
 
-from isopod.cdrom import DriveStatus, get_cdrom_devices, get_drive_status, get_fs_label
+import isopod.cdrom
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class Controller(Thread):
     def run(self):
         log.info("Initializing CD-ROM device monitoring")
         self.udev_observer.start()
-        for dev in get_cdrom_devices():
+        for dev in isopod.cdrom.get_drives():
             self._refresh_device(dev)
 
         log.info("Starting controller")
@@ -49,7 +49,7 @@ class Controller(Thread):
         path = dev.device_node
         last_label = self.disc_label_by_device.get(path)
         last_ready = last_label is not None
-        next_ready = get_drive_status(path) == DriveStatus.DISC_OK
+        next_ready = isopod.cdrom.is_drive_loaded(dev)
 
         if last_ready and not next_ready:
             log.debug("Disc removed from %s", path)
@@ -59,7 +59,7 @@ class Controller(Thread):
         if not next_ready:
             return
 
-        next_label = get_fs_label(path)
+        next_label = isopod.cdrom.get_label(dev)
         if next_label is None:
             log.warn("Disc in %s has no label; tracking may be inaccurate", path)
             next_label = ""
