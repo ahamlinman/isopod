@@ -41,12 +41,6 @@ def main():
     # TODO: Remove echo=True at some point when things are more stable.
     isopod.store.setup(create_engine(f"sqlite+pysqlite:///{args.db_path}", echo=True))
 
-    with isopod.store.Session() as session:
-        with session.begin():
-            disc = isopod.store.get_disc(session, "ISOTEST")
-            print(disc.status)
-            print(isopod.store.list_discs(session))
-
     ripper = isopod.ripper.Controller("/dev/cdrom")
     ripper.start()
 
