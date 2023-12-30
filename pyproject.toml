@@ -17,9 +17,7 @@ classifiers = [
 
 [project.scripts]
 isopod = "isopod:main"
-isopod-list = "isopod.scripts:list"
-isopod-monitor = "isopod.scripts:monitor"
-isopod-status = "isopod.scripts:status"
+isopod-script = "isopod.scripts:cli"
 
 [build-system]
 requires = ["setuptools>=61.0", "Cython>=3"]
