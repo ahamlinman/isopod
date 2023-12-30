@@ -28,12 +28,6 @@ def get_cdrom_devices() -> Iterable[Device]:
     return Enumerator(Context()).match_property("ID_CDROM", "1")
 
 
-def get_cdrom_device_paths() -> list[str]:
-    return [
-        d.device_node for d in Enumerator(Context()).match_property("ID_CDROM", "1")
-    ]
-
-
 def get_drive_status(device_path: str) -> DriveStatus:
     fd = os.open(device_path, os.O_RDONLY | os.O_NONBLOCK)
     try:
