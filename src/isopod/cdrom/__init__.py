@@ -29,12 +29,11 @@ def get_cdrom_devices() -> Iterable[Device]:
 
 
 def get_drive_status(device_path: str) -> DriveStatus:
-    fd = os.open(device_path, os.O_RDONLY | os.O_NONBLOCK)
-    try:
-        result = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE)
-        return DriveStatus(result)
-    finally:
-        os.close(fd)
+    dev = Devices.from_device_file(Context(), device_path)
+    if dev.properties.get("ID_CDROM_MEDIA") == "1":
+        return DriveStatus.DISC_OK
+    else:
+        return DriveStatus.NO_DISC
 
 
 def get_fs_label(device_path: str) -> Optional[str]:

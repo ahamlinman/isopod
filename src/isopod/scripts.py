@@ -21,7 +21,7 @@ def list():
     """List CD-ROM devices on the system."""
     for dev in get_cdrom_devices():
         path = dev.device_node
-        if os.getuid() == 0 and get_drive_status(path) == DriveStatus.DISC_OK:
+        if get_drive_status(path) == DriveStatus.DISC_OK:
             print(f"{path}\t{get_fs_label(path)}")
         else:
             print(dev.device_node)
