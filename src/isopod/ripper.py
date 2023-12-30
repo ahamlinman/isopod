@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum, auto
 from queue import Queue
+from subprocess import Popen
 from threading import Thread
 
 from pyudev import Context, Device, Monitor, MonitorObserver
@@ -29,6 +30,7 @@ class Controller(Thread):
         super().__init__(daemon=True)
         self.events: Queue[Event] = Queue()
         self.disc_label_by_device: dict[str, str] = dict()
+        self.rip_popen_by_device: dict[str, Popen] = dict()
         self.udev_context = Context()
         self.udev_monitor = Monitor.from_netlink(self.udev_context)
         self.udev_observer = MonitorObserver(
@@ -45,15 +47,18 @@ class Controller(Thread):
         while evt := self.events.get():
             match evt.kind:
                 case EventKind.DISC_LOADED:
-                    log.info("%s loaded", evt.device_path)
+                    self._handle_disc_loaded(evt.device_path)
                 case EventKind.DISC_UNLOADED:
-                    log.info("%s unloaded", evt.device_path)
+                    self._handle_disc_unloaded(evt.device_path)
                 case EventKind.RIP_SUCCEEDED:
-                    log.info("%s successfully ripped", evt.device_path)
+                    self._handle_rip_succeeded(evt.device_path)
                 case EventKind.RIP_FAILED:
-                    log.info("%s failed to rip", evt.device_path)
+                    self._handle_rip_failed(evt.device_path)
 
     def _refresh_device(self, dev: Device):
+        if not isopod.udev.is_cdrom_drive(dev):
+            return
+
         path = dev.device_node
         last_label = self.disc_label_by_device.get(path)
         last_loaded = last_label is not None
@@ -77,3 +82,15 @@ class Controller(Thread):
         elif last_loaded and last_label != next_label:
             self.events.put(Event(EventKind.DISC_UNLOADED, path))
             self.events.put(Event(EventKind.DISC_LOADED, path))
+
+    def _handle_disc_loaded(self, device_path: str):
+        log.info("%s loaded", device_path)
+
+    def _handle_disc_unloaded(self, device_path: str):
+        log.info("%s unloaded", device_path)
+
+    def _handle_rip_succeeded(self, device_path: str):
+        log.info("%s successfully ripped", device_path)
+
+    def _handle_rip_failed(self, device_path: str):
+        log.info("%s failed to rip", device_path)

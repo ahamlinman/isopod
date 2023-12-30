@@ -25,6 +25,11 @@ def get_cdrom_drives() -> Iterable[Device]:
     return Enumerator(CTX.ctx).match_property("ID_CDROM", "1")
 
 
+def is_cdrom_drive(dev: str | Device) -> bool:
+    dev = get_device(dev) if isinstance(dev, str) else dev
+    return dev.properties.get("ID_CDROM") == "1"
+
+
 def is_cdrom_loaded(dev: str | Device) -> bool:
     dev = get_device(dev) if isinstance(dev, str) else dev
     return dev.properties.get("ID_CDROM_MEDIA") == "1"
