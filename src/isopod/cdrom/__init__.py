@@ -1,9 +1,9 @@
 import os
 from enum import Enum
 from fcntl import ioctl
-from typing import Optional
+from typing import Iterable, Optional
 
-from pyudev import Context, DeviceNotFoundError, Devices, Enumerator
+from pyudev import Context, Device, DeviceNotFoundError, Devices, Enumerator
 
 from isopod.cdrom.constants import (
     CDROM_DRIVE_STATUS,
@@ -22,6 +22,10 @@ class DriveStatus(Enum):
     TRAY_OPEN = CDS_TRAY_OPEN
     DRIVE_NOT_READY = CDS_DRIVE_NOT_READY
     DISC_OK = CDS_DISC_OK
+
+
+def get_cdrom_devices() -> Iterable[Device]:
+    return Enumerator(Context()).match_property("ID_CDROM", "1")
 
 
 def get_cdrom_device_paths() -> list[str]:
