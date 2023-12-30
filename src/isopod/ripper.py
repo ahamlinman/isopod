@@ -26,7 +26,7 @@ class Event:
 
 class Controller(Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(daemon=True)
         self.events: Queue[Event] = Queue()
         self.disc_label_by_device: dict[str, str] = dict()
         self.udev_context = Context()

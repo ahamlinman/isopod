@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import threading
 
 from sqlalchemy import create_engine
 
@@ -12,6 +13,7 @@ logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
     datefmt="%F %T",
 )
+
 
 # Work around SQLAlchemy adding their own handler for echo=True, even though we
 # already have one at the root.
@@ -47,4 +49,7 @@ def main():
 
     ripper = isopod.ripper.Controller()
     ripper.start()
-    ripper.join()
+
+    # TODO: Something other than blocking forever, e.g. wait for a signal and
+    # let all remaining rips finish.
+    threading.Event().wait()
