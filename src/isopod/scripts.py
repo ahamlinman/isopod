@@ -1,9 +1,10 @@
 import logging
+import os
 
 import click
 from pyudev import Context, Monitor
 
-from isopod.cdrom import get_cdrom_devices, get_drive_status, get_fs_label
+from isopod.cdrom import DriveStatus, get_cdrom_devices, get_drive_status, get_fs_label
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -19,7 +20,11 @@ def cli():
 def list():
     """List CD-ROM devices on the system."""
     for dev in get_cdrom_devices():
-        print(dev.device_node)
+        path = dev.device_node
+        if os.getuid() == 0 and get_drive_status(path) == DriveStatus.DISC_OK:
+            print(f"{path}\t{get_fs_label(path)}")
+        else:
+            print(dev.device_node)
 
 
 @cli.command()
