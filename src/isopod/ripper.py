@@ -1,8 +1,9 @@
 import logging
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
 from queue import Queue
-from subprocess import Popen
+from subprocess import DEVNULL, Popen
 from threading import Thread
 
 from pyudev import Context, Device, Monitor, MonitorObserver
@@ -86,6 +87,19 @@ class Controller(Thread):
     def _handle_disc_loaded(self, device_path: str):
         log.info("%s loaded", device_path)
 
+        args = [
+            "ddrescue",
+            "--retry-passes=2",
+            "--timeout=300",
+            device_path,
+            f"isopod-{time.strftime('%F-%H-%M-%S')}.iso",
+        ]
+        log.debug("Ripping with: %s", args)
+        proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+        _spawn_popen_waiter(self, device_path, proc)
+        self.rip_popen_by_device[device_path] = proc
+        log.info("Successfully started ripping %s", device_path)
+
     def _handle_disc_unloaded(self, device_path: str):
         log.info("%s unloaded", device_path)
 
@@ -94,3 +108,14 @@ class Controller(Thread):
 
     def _handle_rip_failed(self, device_path: str):
         log.info("%s failed to rip", device_path)
+
+
+def _spawn_popen_waiter(ctl: Controller, device_path: str, proc: Popen):
+    def wait_for_process():
+        if (returncode := proc.wait()) == 0:
+            ctl.events.put(Event(EventKind.RIP_SUCCEEDED, device_path))
+        else:
+            log.warn("Rip process exited with code %d", returncode)
+            ctl.events.put(Event(EventKind.RIP_FAILED, device_path))
+
+    Thread(target=wait_for_process, daemon=True).start()
