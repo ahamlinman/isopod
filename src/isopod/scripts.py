@@ -1,5 +1,4 @@
 import logging
-import os
 
 import click
 from pyudev import Context, Monitor

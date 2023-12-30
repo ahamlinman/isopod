@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 
 import isopod.ripper
 import isopod.store
-from isopod.store import Disc, DiscStatus
 
 logging.basicConfig(
     level=logging.DEBUG,
