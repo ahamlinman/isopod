@@ -47,7 +47,7 @@ def main():
             print(disc.status)
             print(isopod.store.list_discs(session))
 
-    ripper = isopod.ripper.Controller()
+    ripper = isopod.ripper.Controller("/dev/cdrom")
     ripper.start()
 
     # TODO: Something other than blocking forever, e.g. wait for a signal and
