@@ -63,7 +63,10 @@ class Controller(Thread):
             if isinstance(self.state, DriveLoaded):
                 log.info("Starting new ripper")
                 src = self.device.device_node
-                dst = f"isopod-{time.time()}.iso"
+                dst = str(time.time()).replace(".", "")
+                if self.state.label:
+                    dst += f"_{self.state.label}"
+                dst += ".iso"
                 self.ripper = Ripper(src, dst)
                 self.ripper.start()
 
