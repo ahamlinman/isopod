@@ -1,6 +1,9 @@
 import logging
+import threading
+import time
 from dataclasses import dataclass
 from queue import Queue
+from subprocess import DEVNULL, Popen
 from threading import Thread
 from typing import Optional
 
@@ -32,6 +35,7 @@ class Controller(Thread):
         self.device = isopod.udev.get_device(device_path)
         self.state = DriveUnloaded()
         self.next_states: Queue[DriveState] = Queue()
+        self.ripper: Optional[Ripper] = None
 
         self.udev_context = Context()
         self.udev_monitor = Monitor.from_netlink(self.udev_context)
@@ -50,10 +54,18 @@ class Controller(Thread):
             self.state = next_state
             log.info("Drive state changed: %s", self.state)
 
+            if self.ripper is not None:
+                log.info("Finalizing previous ripper")
+                self.ripper.terminate()
+                self.ripper.join()
+                self.ripper = None
+
             if isinstance(self.state, DriveLoaded):
-                log.info("Would start a new rip process")
-            else:
-                log.info("Would kill any ongoing rip process")
+                log.info("Starting new ripper")
+                src = self.device.device_node
+                dst = f"isopod-{time.time()}.iso"
+                self.ripper = Ripper(src, dst)
+                self.ripper.start()
 
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
@@ -64,27 +76,43 @@ class Controller(Thread):
                 self.next_states.put(DriveUnloaded())
 
 
-# def _rip_device(self, device_path: str):
-#     args = [
-#         "ddrescue",
-#         "--retry-passes=2",
-#         "--timeout=300",
-#         device_path,
-#         f"isopod-{time.strftime('%F-%H-%M-%S')}.iso",
-#     ]
-#     log.debug("Ripping with: %s", args)
-#     proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
-#     _spawn_popen_waiter(self, device_path, proc)
-#     self.rip_popen_by_device[device_path] = proc
-#     log.info("Successfully started ripping %s", device_path)
+class Ripper(Thread):
+    def __init__(self, src: str, dst: str):
+        super().__init__()
+        self.poke = threading.Event()
+        self.src = src
+        self.dst = dst
+        self.terminal = False
+        self.terminating = False
 
+    def run(self):
+        args = [
+            "ddrescue",
+            "--retry-passes=2",
+            "--timeout=300",
+            self.src,
+            self.dst,
+        ]
+        self.proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+        Thread(target=self._wait_and_poke, daemon=True).start()
+        log.info("Started ripper process: %s", args)
 
-# def _spawn_popen_waiter(ctl: Dispatcher, device_path: str, proc: Popen):
-#     def wait_for_process():
-#         if (returncode := proc.wait()) == 0:
-#             ctl.events.put(Dispatch(DispatchKind.RIP_SUCCEEDED, device_path))
-#         else:
-#             log.warn("Rip process exited with code %d", returncode)
-#             ctl.events.put(Dispatch(DispatchKind.RIP_FAILED, device_path))
+        while self.poke.wait():
+            if self.terminal and not self.terminating:
+                self.proc.terminate()
+                self.terminating = True
 
-#     Thread(target=wait_for_process, daemon=True).start()
+            if self.proc.poll() is not None:
+                log.info("Ripper exited with status %d", self.proc.returncode)
+                self.terminal = True
+                self.terminating = True
+                return
+
+    def terminate(self):
+        if not self.terminal:
+            self.terminal = True
+            self.poke.set()
+
+    def _wait_and_poke(self):
+        self.proc.wait()
+        self.poke.set()
