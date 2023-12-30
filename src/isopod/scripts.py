@@ -43,7 +43,7 @@ def monitor():
 
 
 @cli.command()
-@click.argument("device_path", type=click.Path(exists=True))
+@click.argument("device_path", type=click.Path(exists=True, readable=False))
 def status(device_path):
     """Print the status of the CD-ROM device at DEVICE_PATH."""
 
