@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 
 def setup(engine: Engine):
     """Initialize the database schema and configure SQLAlchemy sessions to use it."""
-    log.info("Configuring state store: %s", engine)
+    log.info("Configuring database: %s", engine)
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
 
