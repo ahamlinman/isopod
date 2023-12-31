@@ -1,4 +1,5 @@
 import logging
+import shlex
 import threading
 import time
 from dataclasses import dataclass
@@ -155,7 +156,7 @@ class Ripper(Thread):
         ]
         self.proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._wait_and_poke, daemon=True).start()
-        log.info("Started ripper process: %s", args)
+        log.info("Running: %s", shlex.join(args))
 
         while self.trigger.wait():
             if self.terminal and not self.terminating:

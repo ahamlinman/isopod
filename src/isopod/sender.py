@@ -1,6 +1,6 @@
 import logging
 import math
-import os
+import shlex
 import subprocess
 import threading
 import time
@@ -33,7 +33,7 @@ class Controller(Thread):
                 continue
 
             args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
-            log.info("Starting sync: %s", args)
+            log.info("Running: %s", shlex.join(args))
             proc = subprocess.run(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
             if proc.returncode == 0:
