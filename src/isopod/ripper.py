@@ -9,6 +9,7 @@ from threading import Thread
 from typing import Callable, Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
+from sqlalchemy import func, select
 
 import isopod
 import isopod.linux
@@ -68,12 +69,12 @@ class Controller(Thread):
         self.device = isopod.linux.get_device(self.device_path)
         init_source_hash = isopod.linux.get_source_hash(self.device)
         with db.Session() as session:
-            if (
-                session.query(db.Disc)
-                .filter_by(status=db.DiscStatus.SENDABLE, source_hash=init_source_hash)
-                .count()
-                > 0
-            ):
+            stmt = (
+                select(func.count())
+                .select_from(db.Disc)
+                .filter_by(source_hash=init_source_hash)
+            )
+            if session.execute(stmt).scalar_one() > 0:
                 self.state = DrivePreloaded(self.device)
             else:
                 self.state = DriveUnloaded()
