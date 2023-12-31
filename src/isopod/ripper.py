@@ -28,7 +28,6 @@ class DrivePreloaded(DriveState):
 @dataclass
 class DriveLoaded(DriveState):
     device: Device
-    label: Optional[str]
 
 
 @dataclass
@@ -91,9 +90,9 @@ class Controller(Thread):
             if isinstance(self.state, DriveLoaded):
                 log.info("Starting new ripper")
                 self.device = self.state.device
-                dst = str(time.time()).replace(".", "")
-                if self.state.label:
-                    dst += f"_{self.state.label}"
+                dst = str(time.time_ns())
+                if label := isopod.linux.get_fs_label(self.device):
+                    dst += f"_{label}"
                 dst += ".iso"
                 self.ripper = Ripper(self.device, dst, self.on_rip_success)
                 self.ripper.start()
@@ -101,8 +100,7 @@ class Controller(Thread):
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
             if isopod.linux.is_cdrom_loaded(dev):
-                label = isopod.linux.get_fs_label(dev)
-                self.next_states.put(DriveLoaded(device=dev, label=label))
+                self.next_states.put(DriveLoaded(device=dev))
             else:
                 self.next_states.put(DriveUnloaded())
 
