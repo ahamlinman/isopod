@@ -41,6 +41,8 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 def main(device, workdir):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
+    workdir = os.path.abspath(workdir)
+    log.info("Entering workdir: %s", workdir)
     os.chdir(workdir)
 
     # TODO: Remove echo=True at some point when things are more stable.
