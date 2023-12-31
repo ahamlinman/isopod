@@ -24,7 +24,7 @@ class DriveState:
 
 @dataclass
 class DriveLoaded(DriveState):
-    # TODO: Take advantage of diskseq.
+    diskseq: Optional[str]
     label: Optional[str]
 
 
@@ -81,8 +81,9 @@ class Controller(Thread):
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
             if isopod.udev.is_cdrom_loaded(dev):
+                diskseq = isopod.udev.get_diskseq(dev)
                 label = isopod.udev.get_fs_label(dev)
-                self.next_states.put(DriveLoaded(label))
+                self.next_states.put(DriveLoaded(diskseq=diskseq, label=label))
             else:
                 self.next_states.put(DriveUnloaded())
 

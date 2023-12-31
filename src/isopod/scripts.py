@@ -34,5 +34,6 @@ def monitor():
 
 def _print_cdrom_info(dev: Device):
     loaded = isopod.udev.is_cdrom_loaded(dev)
+    diskseq = isopod.udev.get_diskseq(dev)
     label = isopod.udev.get_fs_label(dev)
-    print(f"{dev.device_node}\t{loaded}\t{label}")
+    print(f"{dev.device_node}\t{loaded}\t{diskseq}\t{label}")

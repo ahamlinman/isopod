@@ -24,6 +24,7 @@ class Disc(Base):
 
     path: Mapped[str] = mapped_column(primary_key=True)
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
+    # TODO: Consider tracking boot ID and diskseq.
 
     def __repr__(self):
         return f"Disc({self.name}, {self.status})"

@@ -16,6 +16,11 @@ def get_device(path: str) -> Device:
     return Devices.from_device_file(CTX.ctx, path)
 
 
+def get_diskseq(dev: str | Device) -> Optional[str]:
+    dev = get_device(dev) if isinstance(dev, str) else dev
+    return dev.properties.get("DISKSEQ")
+
+
 def get_fs_label(dev: str | Device) -> Optional[str]:
     dev = get_device(dev) if isinstance(dev, str) else dev
     return dev.properties.get("ID_FS_LABEL")
