@@ -93,6 +93,8 @@ class Ripper(Thread):
         self.terminating = False
 
     def run(self):
+        # TODO: Check for minimum available space in the working directory.
+
         with isopod.store.Session() as session:
             disc = isopod.store.Disc(path=self.dst, status=DiscStatus.RIPPABLE)
             session.add(disc)
