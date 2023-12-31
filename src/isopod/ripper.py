@@ -10,6 +10,7 @@ from threading import Thread
 from typing import Callable, Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
+from sqlalchemy import delete, select
 
 import isopod
 import isopod.linux
@@ -19,6 +20,11 @@ log = logging.getLogger(__name__)
 
 
 class DriveState:
+    pass
+
+
+@dataclass
+class DrivePreloaded(DriveState):
     pass
 
 
@@ -40,7 +46,7 @@ class Controller(Thread):
         self.device = isopod.linux.get_device(device_path)
         self.on_rip_success = on_rip_success
 
-        self.state = DriveUnloaded()
+        self.state = self._init_drive_state()
         self.next_states: Queue[DriveState] = Queue()
         self.ripper: Optional[Ripper] = None
 
@@ -50,13 +56,30 @@ class Controller(Thread):
             self.udev_monitor, callback=self._handle_device_event
         )
 
+    def _init_drive_state(self) -> DriveState:
+        with db.Session() as session:
+            saved_rip = session.execute(select(db.LastRip)).scalar_one_or_none()
+            current_rip = db.LastRip.for_device(self.device)
+            if (
+                saved_rip.bootid == current_rip.bootid
+                and saved_rip.devpath == current_rip.devpath
+                and saved_rip.diskseq == current_rip.diskseq
+            ):
+                return DrivePreloaded()
+
+        return DriveUnloaded()
+
     def run(self):
         self.udev_observer.start()
         self._handle_device_event(self.device)
         log.info("Started device monitor")
 
         while next_state := self.next_states.get():
-            if self.state == next_state:
+            if isinstance(self.state, DrivePreloaded):
+                log.info("Current disc was ripped by a previous isopod process")
+                self.state = next_state
+                continue
+            elif self.state == next_state:
                 continue
 
             self.state = next_state
@@ -129,17 +152,20 @@ class Ripper(Thread):
             self.terminal = True
             self.terminating = True
 
-            if self.proc.returncode == 0:
-                with db.Session() as session:
-                    disc.status = db.DiscStatus.SENDABLE
-                    session.merge(disc)
-                    session.commit()
-                    self.on_rip_success()
-            else:
+            if self.proc.returncode != 0:
                 isopod.force_unlink(self.dst)
                 with db.Session() as session:
                     session.delete(disc)
                     session.commit()
+                return
+
+            with db.Session() as session:
+                disc.status = db.DiscStatus.SENDABLE
+                session.merge(disc)
+                session.execute(delete(db.LastRip))
+                session.add(db.LastRip.for_device(self.src))
+                session.commit()
+                self.on_rip_success()
 
             return
 

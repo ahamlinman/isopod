@@ -1,7 +1,12 @@
+from pathlib import Path
 from threading import local
 from typing import Iterable, Optional
 
 from pyudev import Context, Device, Devices, Enumerator
+
+
+def get_boot_id() -> str:
+    return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
 
 
 class UdevThreadLocal(local):
