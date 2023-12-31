@@ -7,6 +7,7 @@ import click
 from sqlalchemy import create_engine
 
 import isopod.ripper
+import isopod.sender
 import isopod.store
 
 logging.basicConfig(
@@ -52,6 +53,9 @@ def main(workdir, device, target):
 
     ripper = isopod.ripper.Controller(device)
     ripper.start()
+
+    sender = isopod.sender.Controller(target)
+    sender.start()
 
     # TODO: Something other than blocking forever, e.g. wait for a signal and
     # let all remaining rips finish.
