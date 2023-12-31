@@ -6,11 +6,12 @@ import signal
 import threading
 
 import click
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 
 import isopod.ripper
 import isopod.sender
 import isopod.store
+from isopod.store import Disc, DiscStatus, Session
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -56,6 +57,7 @@ def main(workdir, device, target):
     os.chdir(workdir)
 
     isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
+    cleanup_stale_discs()
 
     sender = isopod.sender.Controller(target)
     sender.start()
@@ -65,6 +67,22 @@ def main(workdir, device, target):
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Signaled to stop; waiting for any active rip to finish")
+
+
+def cleanup_stale_discs():
+    with Session() as session:
+        stmt = select(Disc).where(
+            Disc.status.in_((DiscStatus.RIPPABLE, DiscStatus.COMPLETE))
+        )
+        for disc in session.execute(stmt).scalars():
+            try:
+                os.unlink(disc.path)
+            except FileNotFoundError:
+                pass
+
+            session.delete(disc)
+            session.commit()
+            log.info("Cleaned up stale disc %s", disc.path)
 
 
 def wait_for_any_signal_once(*args):
