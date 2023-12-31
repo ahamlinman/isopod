@@ -2,6 +2,7 @@ import logging
 import os
 import os.path
 import shutil
+import signal
 import threading
 
 import click
@@ -62,6 +63,8 @@ def main(workdir, device, target):
     ripper = isopod.ripper.Controller(device, sender.poke)
     ripper.start()
 
-    # TODO: Something other than blocking forever, e.g. wait for a signal and
-    # let all remaining rips finish.
-    threading.Event().wait()
+    signaled = threading.Event()
+    signal.signal(signal.SIGINT, lambda *_: signaled.set())
+    signal.signal(signal.SIGTERM, lambda *_: signaled.set())
+    signaled.wait()
+    log.info("Signaled to stop; waiting for any active rip to finish")

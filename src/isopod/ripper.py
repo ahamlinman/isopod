@@ -88,7 +88,7 @@ class Controller(Thread):
 
 class Ripper(Thread):
     def __init__(self, src: str, dst: str, on_rip_success: Callable):
-        super().__init__()
+        super().__init__(daemon=False)
         self.src = src
         self.dst = dst
         self.on_rip_success = on_rip_success
