@@ -8,10 +8,9 @@ import threading
 import click
 from sqlalchemy import create_engine, select
 
-import isopod.db
 import isopod.ripper
 import isopod.sender
-from isopod.db import Disc, DiscStatus, Session
+from isopod import db
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -56,7 +55,7 @@ def main(workdir, device, target):
     log.info("Entering workdir: %s", workdir)
     os.chdir(workdir)
 
-    isopod.db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
+    db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
     sender = isopod.sender.Controller(target)
@@ -77,9 +76,9 @@ def force_unlink(path):
 
 
 def cleanup_stale_discs():
-    with Session() as session:
-        stmt = select(Disc).where(
-            Disc.status.in_((DiscStatus.RIPPABLE, DiscStatus.COMPLETE))
+    with db.Session() as session:
+        stmt = select(db.Disc).where(
+            db.Disc.status.in_((db.DiscStatus.RIPPABLE, db.DiscStatus.COMPLETE))
         )
         for disc in session.execute(stmt).scalars():
             force_unlink(disc.path)

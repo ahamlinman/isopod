@@ -10,7 +10,7 @@ from threading import Thread
 from sqlalchemy import select
 
 import isopod
-from isopod.db import Disc, DiscStatus, Session
+from isopod import db
 
 log = logging.getLogger(__name__)
 retry_base_sec = 5
@@ -53,17 +53,17 @@ class Controller(Thread):
         self.trigger.set()
 
     def _get_next_path(self):
-        with Session() as session:
-            stmt = select(Disc).filter_by(status=DiscStatus.SENDABLE)
+        with db.Session() as session:
+            stmt = select(db.Disc).filter_by(status=db.DiscStatus.SENDABLE)
             disc = session.execute(stmt).scalars().first()
             if disc is not None:
                 return disc.path
 
     def _handle_send_success(self, path):
-        with Session() as session:
-            stmt = select(Disc).filter_by(path=path)
+        with db.Session() as session:
+            stmt = select(db.Disc).filter_by(path=path)
             disc = session.execute(stmt).scalar_one()
-            disc.status = DiscStatus.COMPLETE
+            disc.status = db.DiscStatus.COMPLETE
             session.commit()
             log.info("Finished sending %s", path)
 
