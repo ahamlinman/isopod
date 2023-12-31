@@ -17,12 +17,17 @@ log = logging.getLogger(__name__)
 
 
 class DriveState:
-    pass
+    @property
+    def diskseq(self):
+        if hasattr(self, "device"):
+            return isopod.linux.get_diskseq(self.device)
+        else:
+            return None
 
 
 @dataclass
 class DrivePreloaded(DriveState):
-    pass
+    device: Device
 
 
 @dataclass
@@ -30,12 +35,11 @@ class DriveLoaded(DriveState):
     device: Device
 
     def __eq__(self, other):
-        if not isinstance(other, DriveLoaded):
-            return False
-
-        self_seq = isopod.linux.get_diskseq(self.device)
-        other_seq = isopod.linux.get_diskseq(other.device)
-        return self.device == other.device and self_seq == other_seq
+        return (
+            isinstance(other, DriveLoaded)
+            and self.device == other.device
+            and self.diskseq == other.diskseq
+        )
 
 
 @dataclass
@@ -69,7 +73,7 @@ class Controller(Thread):
                 .count()
                 > 0
             ):
-                self.state = DrivePreloaded()
+                self.state = DrivePreloaded(self.device)
             else:
                 self.state = DriveUnloaded()
 
@@ -78,11 +82,15 @@ class Controller(Thread):
         log.info("Started device monitor")
 
         while next_state := self.next_states.get():
-            if isinstance(self.state, DrivePreloaded):
+            if self.state == next_state:
+                continue
+
+            if (
+                isinstance(self.state, DrivePreloaded)
+                and self.state.diskseq == next_state.diskseq
+            ):
                 log.info("Current disc is already ripped and ready to send")
                 self.state = next_state
-                continue
-            if self.state == next_state:
                 continue
 
             self.state = next_state
@@ -112,10 +120,9 @@ class Controller(Thread):
             self.next_states.put(DriveUnloaded())
             return
 
-        if isinstance(self.state, DriveLoaded):
-            old_seq = isopod.linux.get_diskseq(self.state.device)
+        if old_seq := self.state.diskseq:
             new_seq = isopod.linux.get_diskseq(dev)
-            if old_seq and new_seq and int(old_seq) >= int(new_seq):
+            if new_seq and int(old_seq) > int(new_seq):
                 return
 
         self.next_states.put(DriveLoaded(dev))
