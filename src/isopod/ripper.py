@@ -29,6 +29,14 @@ class DrivePreloaded(DriveState):
 class DriveLoaded(DriveState):
     device: Device
 
+    def __eq__(self, other):
+        if not isinstance(other, DriveLoaded):
+            return False
+
+        self_seq = isopod.linux.get_diskseq(self.device)
+        other_seq = isopod.linux.get_diskseq(other.device)
+        return self.device == other.device and self_seq == other_seq
+
 
 @dataclass
 class DriveUnloaded(DriveState):
@@ -100,7 +108,7 @@ class Controller(Thread):
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
             if isopod.linux.is_cdrom_loaded(dev):
-                self.next_states.put(DriveLoaded(device=dev))
+                self.next_states.put(DriveLoaded(dev))
             else:
                 self.next_states.put(DriveUnloaded())
 
