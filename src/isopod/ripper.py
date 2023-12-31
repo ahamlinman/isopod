@@ -58,12 +58,12 @@ class Controller(Thread):
 
     def _init_drive_state(self) -> DriveState:
         with db.Session() as session:
-            saved_rip = session.execute(select(db.LastRip)).scalar_one_or_none()
-            current_rip = db.LastRip.from_device(self.device)
-            if (
-                saved_rip.bootid == current_rip.bootid
-                and saved_rip.devpath == current_rip.devpath
-                and saved_rip.diskseq == current_rip.diskseq
+            saved = session.execute(select(db.LastRip)).scalar_one_or_none()
+            current = db.LastRip.from_device(self.device)
+            if saved is not None and (saved.bootid, saved.devpath, saved.diskseq) == (
+                current.bootid,
+                current.devpath,
+                current.diskseq,
             ):
                 return DrivePreloaded()
 
@@ -152,11 +152,11 @@ class Ripper(Thread):
             self.terminating = True
 
             if self.proc.returncode != 0:
-                isopod.force_unlink(self.dst)
                 with db.Session() as session:
+                    isopod.force_unlink(self.dst)
                     session.delete(disc)
                     session.commit()
-                return
+                    return
 
             with db.Session() as session:
                 disc.status = db.DiscStatus.SENDABLE
@@ -164,8 +164,8 @@ class Ripper(Thread):
                 session.execute(delete(db.LastRip))
                 session.add(db.LastRip.from_device(self.src_device))
                 session.commit()
-                self.on_rip_success()
 
+            self.on_rip_success()
             return
 
     def terminate(self):
