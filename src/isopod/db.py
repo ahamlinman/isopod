@@ -27,11 +27,14 @@ class DiscStatus(Enum):
 
 
 class Disc(Base):
-    __tablename__ = "isopod_discs"
+    __tablename__ = "discs"
 
     path: Mapped[str] = mapped_column(primary_key=True)
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
-    # TODO: Consider tracking boot ID and diskseq.
 
-    def __repr__(self):
-        return f"Disc({self.name}, {self.status})"
+
+class LastRip(Base):
+    __tablename__ = "lastrip"
+
+    bootid: Mapped[str] = mapped_column(primary_key=True)
+    diskseq: Mapped[str] = mapped_column(primary_key=True)
