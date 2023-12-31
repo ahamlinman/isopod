@@ -52,10 +52,11 @@ class DriveUnloaded(DriveState):
 
 
 class Controller(Thread):
-    def __init__(self, device_path: str, on_rip_success: Callable):
+    def __init__(self, device_path: str, min_free_bytes: int, on_rip_success: Callable):
         super().__init__(daemon=True)
 
         self.device_path = device_path
+        self.min_free_bytes = min_free_bytes
         self.on_rip_success = on_rip_success
 
         self.next_states: Queue[DriveState] = Queue()
@@ -113,7 +114,9 @@ class Controller(Thread):
                 if label := isopod.linux.get_fs_label(self.device):
                     dst += f"_{label}"
                 dst += ".iso"
-                self.ripper = Ripper(self.device, dst, self.on_rip_success)
+                self.ripper = Ripper(
+                    self.device, dst, self.min_free_bytes, self.on_rip_success
+                )
                 self.ripper.start()
 
     def _handle_device_event(self, dev: Device):
@@ -133,35 +136,27 @@ class Controller(Thread):
 
 
 class Ripper(Thread):
-    def __init__(self, src_device: Device, dst: str, on_rip_success: Callable):
+    def __init__(
+        self,
+        src_device: Device,
+        dst: str,
+        min_free_bytes: int,
+        on_rip_success: Callable,
+    ):
         super().__init__(daemon=False)
+
         self.src_device = src_device
         self.dst = dst
+        self.min_free_bytes = min_free_bytes
         self.on_rip_success = on_rip_success
+
         self.trigger = threading.Event()
         self.terminal = False
         self.terminating = False
 
     def run(self):
-        with open(self.src_device.device_node, "rb") as blk:
-            disc_size = blk.seek(0, io.SEEK_END)
-
-        need_free = disc_size + 5 * (1024**3)  # TODO: Make configurable.
-        if need_free > (total := shutil.disk_usage(".").total):
-            log.error(
-                "Disc too large; need %d bytes free, have %d total in filesystem",
-                need_free,
-                total,
-            )
-            self.terminal = True
-            self.terminating = True
+        if not self._wait_for_min_free():
             return
-        while (free := shutil.disk_usage(".").free) < need_free:
-            log.info("%d bytes free, need at least %d", free, need_free)
-            if self.trigger.wait(timeout=30) and self.terminal:
-                self.trigger.clear()
-                self.terminating = True
-                return
 
         with db.Session() as session:
             disc = db.Disc(path=self.dst, status=db.DiscStatus.RIPPABLE)
@@ -208,6 +203,30 @@ class Ripper(Thread):
 
             self.on_rip_success()
             return
+
+    def _wait_for_min_free(self):
+        with open(self.src_device.device_node, "rb") as blk:
+            disc_size = blk.seek(0, io.SEEK_END)
+            need_free = disc_size + self.min_free_bytes
+
+        if need_free > (total := shutil.disk_usage(".").total):
+            log.error(
+                "Disc too large; need %d bytes free, have %d total in filesystem",
+                need_free,
+                total,
+            )
+            self.terminal = True
+            self.terminating = True
+            return False
+
+        while (free := shutil.disk_usage(".").free) < need_free:
+            log.info("%d bytes free, need at least %d", free, need_free)
+            if self.trigger.wait(timeout=30) and self.terminal:
+                self.trigger.clear()
+                self.terminating = True
+                return False
+
+        return True
 
     def terminate(self):
         if not self.terminal:

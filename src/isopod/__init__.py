@@ -44,7 +44,13 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 @click.option(
     "--target", type=str, required=True, help="The base rsync target to receive ISOs"
 )
-def main(workdir, device, target):
+@click.option(
+    "--min-free-bytes",
+    type=int,
+    default=5 * (1024**3),
+    help="Only rip when this much space will be free after",
+)
+def main(workdir, device, target, min_free_bytes):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -70,7 +76,7 @@ def main(workdir, device, target):
     sender = isopod.sender.Controller(target)
     sender.start()
 
-    ripper = isopod.ripper.Controller(device, sender.poke)
+    ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
     ripper.start()
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
