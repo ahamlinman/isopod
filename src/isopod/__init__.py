@@ -1,6 +1,7 @@
 import logging
 import os
 import os.path
+import shutil
 import threading
 
 import click
@@ -43,6 +44,11 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 )
 def main(workdir, device, target):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
+
+    for cmd in ("ddrescue", "rsync"):
+        if shutil.which(cmd) is None:
+            log.critical("Cannot find %s in $PATH", cmd)
+            os.exit(1)
 
     workdir = os.path.abspath(workdir)
     log.info("Entering workdir: %s", workdir)
