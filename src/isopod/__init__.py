@@ -2,7 +2,6 @@ import logging
 import os
 import os.path
 import threading
-from typing import Optional
 
 import click
 from sqlalchemy import create_engine
@@ -27,18 +26,21 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 
 @click.command(context_settings=context_settings)
 @click.option(
+    "--workdir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
+    default=".",
+    help="The directory to stage ISOs and track their status",
+)
+@click.option(
     "--device",
     type=click.Path(exists=True, readable=True),
     default="/dev/cdrom",
     help="The CD-ROM drive to rip from",
 )
 @click.option(
-    "--workdir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
-    default=".",
-    help="The directory to stage ripped ISOs and track their status",
+    "--target", type=str, required=True, help="The base rsync target to receive ISOs"
 )
-def main(device, workdir):
+def main(workdir, device, target):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     workdir = os.path.abspath(workdir)
