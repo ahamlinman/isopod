@@ -1,5 +1,4 @@
 import logging
-import os.path
 import threading
 import time
 from dataclasses import dataclass
@@ -28,7 +27,7 @@ class DrivePreloaded(DriveState):
 
 @dataclass
 class DriveLoaded(DriveState):
-    diskseq: Optional[str]
+    device: Device
     label: Optional[str]
 
 
@@ -55,6 +54,16 @@ class Controller(Thread):
         )
 
     def _init_drive_state(self) -> DriveState:
+        source_hash = isopod.linux.get_source_hash(self.device)
+        with db.Session() as session:
+            if (
+                session.query(db.Disc)
+                .filter_by(status=db.DiscStatus.SENDABLE, source_hash=source_hash)
+                .count()
+                > 0
+            ):
+                return DrivePreloaded()
+
         return DriveUnloaded()
 
     def run(self):
@@ -64,7 +73,7 @@ class Controller(Thread):
 
         while next_state := self.next_states.get():
             if isinstance(self.state, DrivePreloaded):
-                log.info("Current disc was ripped by a previous isopod process")
+                log.info("Current disc is already ripped and ready to send")
                 self.state = next_state
                 continue
             elif self.state == next_state:
@@ -81,6 +90,7 @@ class Controller(Thread):
 
             if isinstance(self.state, DriveLoaded):
                 log.info("Starting new ripper")
+                self.device = self.state.device
                 dst = str(time.time()).replace(".", "")
                 if self.state.label:
                     dst += f"_{self.state.label}"
@@ -91,9 +101,8 @@ class Controller(Thread):
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
             if isopod.linux.is_cdrom_loaded(dev):
-                diskseq = isopod.linux.get_diskseq(dev)
                 label = isopod.linux.get_fs_label(dev)
-                self.next_states.put(DriveLoaded(diskseq=diskseq, label=label))
+                self.next_states.put(DriveLoaded(device=dev, label=label))
             else:
                 self.next_states.put(DriveUnloaded())
 
@@ -148,6 +157,7 @@ class Ripper(Thread):
 
             with db.Session() as session:
                 disc.status = db.DiscStatus.SENDABLE
+                disc.source_hash = isopod.linux.get_source_hash(self.src_device)
                 session.merge(disc)
                 session.commit()
 
