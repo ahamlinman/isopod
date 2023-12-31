@@ -48,6 +48,7 @@ class Controller(Thread):
         )
 
     def run(self):
+        log.info("Starting device monitor")
         self.udev_observer.start()
         self._handle_device_event(self.device)
 
