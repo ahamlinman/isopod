@@ -8,6 +8,7 @@ import threading
 import click
 from sqlalchemy import create_engine, select
 
+import isopod.linux
 import isopod.ripper
 import isopod.sender
 from isopod import db
@@ -46,10 +47,18 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 def main(workdir, device, target):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
-    for cmd in ("ddrescue", "rsync"):
-        if shutil.which(cmd) is None:
-            log.critical("Cannot find %s in $PATH", cmd)
-            os.exit(1)
+    required_cmds = ("ddrescue", "rsync")
+    missing_cmds = [cmd for cmd in required_cmds if shutil.which(cmd) is None]
+    if missing_cmds:
+        log.critical("Missing required commands: %s", missing_cmds)
+        log.critical("Isopod needs these installed to rip and send discs")
+        os.exit(1)
+
+    if isopod.linux.get_diskseq(device) is None:
+        log.critical("%s has no diskseq property in udev", device)
+        log.critical("Isopod will behave erratically in this configuration")
+        log.critical("Try a newer kernel, systemd, udev, etc.")
+        os.exit(1)
 
     workdir = os.path.abspath(workdir)
     log.info("Entering workdir: %s", workdir)
