@@ -160,6 +160,8 @@ class Ripper(Thread):
         log.info("Running: %s", shlex.join(args))
 
         while self.trigger.wait():
+            self.trigger.clear()
+
             if self.terminal and not self.terminating:
                 self.proc.terminate()
                 self.terminating = True
