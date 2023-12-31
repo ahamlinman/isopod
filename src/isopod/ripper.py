@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from queue import Queue
 from subprocess import DEVNULL, Popen
 from threading import Thread
-from typing import Optional
+from typing import Callable, Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
 
@@ -33,10 +33,12 @@ class DriveUnloaded(DriveState):
 
 
 class Controller(Thread):
-    def __init__(self, device_path: str):
+    def __init__(self, device_path: str, on_rip_success: Callable):
         super().__init__(daemon=True)
 
         self.device = isopod.udev.get_device(device_path)
+        self.on_rip_success = on_rip_success
+
         self.state = DriveUnloaded()
         self.next_states: Queue[DriveState] = Queue()
         self.ripper: Optional[Ripper] = None
@@ -72,7 +74,7 @@ class Controller(Thread):
                 if self.state.label:
                     dst += f"_{self.state.label}"
                 dst += ".iso"
-                self.ripper = Ripper(src, dst)
+                self.ripper = Ripper(src, dst, self.on_rip_success)
                 self.ripper.start()
 
     def _handle_device_event(self, dev: Device):
@@ -85,11 +87,12 @@ class Controller(Thread):
 
 
 class Ripper(Thread):
-    def __init__(self, src: str, dst: str):
+    def __init__(self, src: str, dst: str, on_rip_success: Callable):
         super().__init__()
-        self.poke = threading.Event()
         self.src = src
         self.dst = dst
+        self.on_rip_success = on_rip_success
+        self.trigger = threading.Event()
         self.terminal = False
         self.terminating = False
 
@@ -112,7 +115,7 @@ class Ripper(Thread):
         Thread(target=self._wait_and_poke, daemon=True).start()
         log.info("Started ripper process: %s", args)
 
-        while self.poke.wait():
+        while self.trigger.wait():
             if self.terminal and not self.terminating:
                 self.proc.terminate()
                 self.terminating = True
@@ -129,6 +132,7 @@ class Ripper(Thread):
                     disc.status = DiscStatus.SENDABLE
                     session.merge(disc)
                     session.commit()
+                    self.on_rip_success()
             else:
                 try:
                     os.unlink(self.dst)
@@ -143,8 +147,8 @@ class Ripper(Thread):
     def terminate(self):
         if not self.terminal:
             self.terminal = True
-            self.poke.set()
+            self.trigger.set()
 
     def _wait_and_poke(self):
         self.proc.wait()
-        self.poke.set()
+        self.trigger.set()

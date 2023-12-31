@@ -21,14 +21,14 @@ class Controller(Thread):
             target_base += "/"
 
         self.target_base = target_base
-        self.poke = threading.Event()
+        self.trigger = threading.Event()
 
     def run(self):
-        self.poke.set()
-        while self.poke.wait():
+        self.trigger.set()
+        while self.trigger.wait():
             if (path := self._get_next_path()) is None:
                 log.info("Waiting for next sendable ISO")
-                self.poke.clear()
+                self.trigger.clear()
                 continue
 
             args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
@@ -39,7 +39,10 @@ class Controller(Thread):
                 self._handle_send_success(path)
             else:
                 log.error("Sync failed with status %d", proc.returncode)
-                time.sleep(10)
+                time.sleep(10)  # TODO: Make this an exponential backoff.
+
+    def poke(self):
+        self.trigger.set()
 
     def _get_next_path(self):
         with Session() as session:

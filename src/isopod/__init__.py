@@ -51,11 +51,11 @@ def main(workdir, device, target):
     # TODO: Remove echo=True at some point when things are more stable.
     isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3", echo=True))
 
-    ripper = isopod.ripper.Controller(device)
-    ripper.start()
-
     sender = isopod.sender.Controller(target)
     sender.start()
+
+    ripper = isopod.ripper.Controller(device, sender.poke)
+    ripper.start()
 
     # TODO: Something other than blocking forever, e.g. wait for a signal and
     # let all remaining rips finish.
