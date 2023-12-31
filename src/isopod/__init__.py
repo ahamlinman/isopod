@@ -27,20 +27,19 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 
 @click.command(context_settings=context_settings)
 @click.option(
-    "--device", type=str, default="/dev/cdrom", help="The CD-ROM drive to rip from"
+    "--device",
+    type=click.Path(exists=True, readable=True),
+    default="/dev/cdrom",
+    help="The CD-ROM drive to rip from",
 )
 @click.option(
     "--workdir",
-    type=str,
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
     default=".",
     help="The directory to stage ripped ISOs and track their status",
 )
 def main(device, workdir):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
-
-    if os.getuid() != 0:
-        log.critical("Not running as root")
-        return 1
 
     os.chdir(workdir)
 
