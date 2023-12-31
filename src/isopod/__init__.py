@@ -48,8 +48,7 @@ def main(workdir, device, target):
     log.info("Entering workdir: %s", workdir)
     os.chdir(workdir)
 
-    # TODO: Remove echo=True at some point when things are more stable.
-    isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3", echo=True))
+    isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
 
     sender = isopod.sender.Controller(target)
     sender.start()
