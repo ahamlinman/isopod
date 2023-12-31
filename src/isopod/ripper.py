@@ -59,7 +59,7 @@ class Controller(Thread):
     def _init_drive_state(self) -> DriveState:
         with db.Session() as session:
             saved_rip = session.execute(select(db.LastRip)).scalar_one_or_none()
-            current_rip = db.LastRip.for_device(self.device)
+            current_rip = db.LastRip.from_device(self.device)
             if (
                 saved_rip.bootid == current_rip.bootid
                 and saved_rip.devpath == current_rip.devpath
@@ -93,12 +93,11 @@ class Controller(Thread):
 
             if isinstance(self.state, DriveLoaded):
                 log.info("Starting new ripper")
-                src = self.device.device_node
                 dst = str(time.time()).replace(".", "")
                 if self.state.label:
                     dst += f"_{self.state.label}"
                 dst += ".iso"
-                self.ripper = Ripper(src, dst, self.on_rip_success)
+                self.ripper = Ripper(self.device, dst, self.on_rip_success)
                 self.ripper.start()
 
     def _handle_device_event(self, dev: Device):
@@ -112,9 +111,9 @@ class Controller(Thread):
 
 
 class Ripper(Thread):
-    def __init__(self, src: str, dst: str, on_rip_success: Callable):
+    def __init__(self, src_device: Device, dst: str, on_rip_success: Callable):
         super().__init__(daemon=False)
-        self.src = src
+        self.src_device = src_device
         self.dst = dst
         self.on_rip_success = on_rip_success
         self.trigger = threading.Event()
@@ -133,7 +132,7 @@ class Ripper(Thread):
             "ddrescue",
             "--retry-passes=2",
             "--timeout=300",
-            self.src,
+            self.src_device.device_node,
             self.dst,
         ]
         self.proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
@@ -163,7 +162,7 @@ class Ripper(Thread):
                 disc.status = db.DiscStatus.SENDABLE
                 session.merge(disc)
                 session.execute(delete(db.LastRip))
-                session.add(db.LastRip.for_device(self.src))
+                session.add(db.LastRip.from_device(self.src_device))
                 session.commit()
                 self.on_rip_success()
 

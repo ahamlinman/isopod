@@ -44,8 +44,7 @@ class LastRip(Base):
     diskseq: Mapped[str] = mapped_column(primary_key=True)
 
     @classmethod
-    def for_device(_cls, dev: str | Device):
-        dev = isopod.linux.get_device(dev) if isinstance(dev, str) else dev
+    def from_device(_cls, dev: Device):
         bootid = isopod.linux.get_boot_id()
         diskseq = isopod.linux.get_diskseq(dev)
         return LastRip(bootid=bootid, devpath=dev.device_path, diskseq=diskseq)
