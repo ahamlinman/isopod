@@ -1,3 +1,4 @@
+import io
 import logging
 import shlex
 import shutil
@@ -142,9 +143,12 @@ class Ripper(Thread):
         self.terminating = False
 
     def run(self):
-        free_threshold = 8 * (1024**3)  # TODO: Make this configurable.
-        while (free := shutil.disk_usage(".").free) < free_threshold:
-            log.info("%d bytes free, need at least %d", free, free_threshold)
+        with open(self.src_device.device_node, "rb") as blk:
+            disc_size = blk.seek(0, io.SEEK_END)
+
+        need_free = disc_size + 5 * (1024**3)  # TODO: Make this configurable.
+        while (free := shutil.disk_usage(".").free) < need_free:
+            log.info("%d bytes free, need at least %d", free, need_free)
             if self.trigger.wait(timeout=30) and self.terminal:
                 self.trigger.clear()
                 self.terminating = True
