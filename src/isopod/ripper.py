@@ -24,6 +24,7 @@ class DriveState:
 
 @dataclass
 class DriveLoaded(DriveState):
+    # TODO: Take advantage of diskseq.
     label: Optional[str]
 
 
