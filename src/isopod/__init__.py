@@ -69,17 +69,20 @@ def main(workdir, device, target):
     log.info("Signaled to stop; waiting for any active rip to finish")
 
 
+def force_unlink(path):
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+
+
 def cleanup_stale_discs():
     with Session() as session:
         stmt = select(Disc).where(
             Disc.status.in_((DiscStatus.RIPPABLE, DiscStatus.COMPLETE))
         )
         for disc in session.execute(stmt).scalars():
-            try:
-                os.unlink(disc.path)
-            except FileNotFoundError:
-                pass
-
+            force_unlink(disc.path)
             session.delete(disc)
             session.commit()
             log.info("Cleaned up stale disc %s", disc.path)

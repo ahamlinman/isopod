@@ -9,6 +9,7 @@ from threading import Thread
 
 from sqlalchemy import select
 
+import isopod
 from isopod.store import Disc, DiscStatus, Session
 
 log = logging.getLogger(__name__)
@@ -66,11 +67,7 @@ class Controller(Thread):
             session.commit()
             log.info("Finished sending %s", path)
 
-            try:
-                os.unlink(path)
-            except FileNotFoundError:
-                pass
-
+            isopod.force_unlink(path)
             session.delete(disc)
             session.commit()
             log.info("Cleaned up %s", path)

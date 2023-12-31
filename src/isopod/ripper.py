@@ -11,6 +11,7 @@ from typing import Callable, Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
 
+import isopod
 import isopod.store
 import isopod.udev
 from isopod.store import DiscStatus
@@ -136,10 +137,7 @@ class Ripper(Thread):
                     session.commit()
                     self.on_rip_success()
             else:
-                try:
-                    os.unlink(self.dst)
-                except FileNotFoundError:
-                    pass
+                isopod.force_unlink(self.dst)
                 with isopod.store.Session() as session:
                     session.delete(disc)
                     session.commit()
