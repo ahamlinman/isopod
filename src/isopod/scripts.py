@@ -3,6 +3,7 @@ import shlex
 import signal
 import subprocess
 import sys
+from binascii import hexlify
 from subprocess import DEVNULL
 
 import click
@@ -41,7 +42,8 @@ def _print_cdrom_info(dev: Device):
     loaded = isopod.linux.is_cdrom_loaded(dev)
     diskseq = isopod.linux.get_diskseq(dev)
     label = isopod.linux.get_fs_label(dev)
-    print(f"{dev.device_node}\t{loaded}\t{diskseq}\t{label}")
+    source_hash = hexlify(isopod.linux.get_source_hash(dev)).decode("ascii")
+    print(f"{dev.device_node}\t{loaded}\t{diskseq}\t{label}\t{source_hash}")
 
 
 @cli.group()

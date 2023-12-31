@@ -1,5 +1,4 @@
 import logging
-import os
 import os.path
 import threading
 import time
@@ -10,7 +9,6 @@ from threading import Thread
 from typing import Callable, Optional
 
 from pyudev import Context, Device, Monitor, MonitorObserver
-from sqlalchemy import delete, select
 
 import isopod
 import isopod.linux
@@ -57,16 +55,6 @@ class Controller(Thread):
         )
 
     def _init_drive_state(self) -> DriveState:
-        with db.Session() as session:
-            saved = session.execute(select(db.LastRip)).scalar_one_or_none()
-            current = db.LastRip.from_device(self.device)
-            if saved is not None and (saved.bootid, saved.devpath, saved.diskseq) == (
-                current.bootid,
-                current.devpath,
-                current.diskseq,
-            ):
-                return DrivePreloaded()
-
         return DriveUnloaded()
 
     def run(self):
@@ -161,8 +149,6 @@ class Ripper(Thread):
             with db.Session() as session:
                 disc.status = db.DiscStatus.SENDABLE
                 session.merge(disc)
-                session.execute(delete(db.LastRip))
-                session.add(db.LastRip.from_device(self.src_device))
                 session.commit()
 
             self.on_rip_success()

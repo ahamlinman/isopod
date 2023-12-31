@@ -1,3 +1,4 @@
+from hashlib import sha256
 from pathlib import Path
 from threading import local
 from typing import Iterable, Optional
@@ -24,6 +25,15 @@ def get_device(path: str) -> Device:
 def get_diskseq(dev: str | Device) -> Optional[str]:
     dev = get_device(dev) if isinstance(dev, str) else dev
     return dev.properties.get("DISKSEQ")
+
+
+def get_source_hash(dev: str | Device) -> bytes:
+    dev = get_device(dev) if isinstance(dev, str) else dev
+    ascii_unit_sep = b"\x1f"
+    data = ascii_unit_sep.join(
+        (x.encode("utf-8") for x in (get_boot_id(), dev.device_path, get_diskseq(dev)))
+    )
+    return sha256(data).digest()
 
 
 def get_fs_label(dev: str | Device) -> Optional[str]:
