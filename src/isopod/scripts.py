@@ -99,9 +99,10 @@ def target_run(image, address, port):
             "--rm",
             "--volume=isopod-target:/mnt/isopod-target",
             "busybox:latest",
-            "sh",
-            "-c",
-            "chmod -R 777 /mnt/isopod-target",
+            "chmod",
+            "-R",
+            "777",
+            "/mnt/isopod-target",
         ]
         log.info(args)
         subprocess.run(args, check=True)
