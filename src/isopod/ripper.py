@@ -1,5 +1,6 @@
 import logging
 import shlex
+import shutil
 import threading
 import time
 from dataclasses import dataclass
@@ -141,7 +142,13 @@ class Ripper(Thread):
         self.terminating = False
 
     def run(self):
-        # TODO: Check for minimum available space in the working directory.
+        free_threshold = 8 * (1024**3)  # TODO: Make this configurable.
+        while (free := shutil.disk_usage(".").free) < free_threshold:
+            log.info("%d bytes free, need at least %d", free, free_threshold)
+            if self.trigger.wait(timeout=30) and self.terminal:
+                self.trigger.clear()
+                self.terminating = True
+                return
 
         with db.Session() as session:
             disc = db.Disc(path=self.dst, status=db.DiscStatus.RIPPABLE)
