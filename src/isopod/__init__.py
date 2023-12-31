@@ -63,8 +63,13 @@ def main(workdir, device, target):
     ripper = isopod.ripper.Controller(device, sender.poke)
     ripper.start()
 
-    signaled = threading.Event()
-    signal.signal(signal.SIGINT, lambda *_: signaled.set())
-    signal.signal(signal.SIGTERM, lambda *_: signaled.set())
-    signaled.wait()
+    wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Signaled to stop; waiting for any active rip to finish")
+
+
+def wait_for_any_signal_once(*args):
+    evt = threading.Event()
+    originals = {sig: signal.signal(sig, lambda *_: evt.set()) for sig in args}
+    evt.wait()
+    for sig, handler in originals.items():
+        signal.signal(sig, handler)
