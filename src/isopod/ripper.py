@@ -47,10 +47,9 @@ class Controller(Thread):
     def __init__(self, device_path: str, on_rip_success: Callable):
         super().__init__(daemon=True)
 
-        self.device = isopod.linux.get_device(device_path)
+        self.device_path = device_path
         self.on_rip_success = on_rip_success
 
-        self.state = self._init_drive_state()
         self.next_states: Queue[DriveState] = Queue()
         self.ripper: Optional[Ripper] = None
 
@@ -60,20 +59,20 @@ class Controller(Thread):
             self.udev_monitor, callback=self._handle_device_event
         )
 
-    def _init_drive_state(self) -> DriveState:
-        source_hash = isopod.linux.get_source_hash(self.device)
+    def run(self):
+        self.device = isopod.linux.get_device(self.device_path)
+        init_source_hash = isopod.linux.get_source_hash(self.device)
         with db.Session() as session:
             if (
                 session.query(db.Disc)
-                .filter_by(status=db.DiscStatus.SENDABLE, source_hash=source_hash)
+                .filter_by(status=db.DiscStatus.SENDABLE, source_hash=init_source_hash)
                 .count()
                 > 0
             ):
-                return DrivePreloaded()
+                self.state = DrivePreloaded()
+            else:
+                self.state = DriveUnloaded()
 
-        return DriveUnloaded()
-
-    def run(self):
         self.udev_observer.start()
         self._handle_device_event(self.device)
         log.info("Started device monitor")
