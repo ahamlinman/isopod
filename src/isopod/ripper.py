@@ -12,9 +12,9 @@ from typing import Callable, Optional
 from pyudev import Context, Device, Monitor, MonitorObserver
 
 import isopod
-import isopod.store
+import isopod.db
 import isopod.udev
-from isopod.store import DiscStatus
+from isopod.db import DiscStatus
 
 log = logging.getLogger(__name__)
 
@@ -102,8 +102,8 @@ class Ripper(Thread):
     def run(self):
         # TODO: Check for minimum available space in the working directory.
 
-        with isopod.store.Session() as session:
-            disc = isopod.store.Disc(path=self.dst, status=DiscStatus.RIPPABLE)
+        with isopod.db.Session() as session:
+            disc = isopod.db.Disc(path=self.dst, status=DiscStatus.RIPPABLE)
             session.add(disc)
             session.commit()
 
@@ -131,14 +131,14 @@ class Ripper(Thread):
             self.terminating = True
 
             if self.proc.returncode == 0:
-                with isopod.store.Session() as session:
+                with isopod.db.Session() as session:
                     disc.status = DiscStatus.SENDABLE
                     session.merge(disc)
                     session.commit()
                     self.on_rip_success()
             else:
                 isopod.force_unlink(self.dst)
-                with isopod.store.Session() as session:
+                with isopod.db.Session() as session:
                     session.delete(disc)
                     session.commit()
 

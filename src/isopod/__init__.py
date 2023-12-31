@@ -8,10 +8,10 @@ import threading
 import click
 from sqlalchemy import create_engine, select
 
+import isopod.db
 import isopod.ripper
 import isopod.sender
-import isopod.store
-from isopod.store import Disc, DiscStatus, Session
+from isopod.db import Disc, DiscStatus, Session
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -56,7 +56,7 @@ def main(workdir, device, target):
     log.info("Entering workdir: %s", workdir)
     os.chdir(workdir)
 
-    isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
+    isopod.db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
     sender = isopod.sender.Controller(target)

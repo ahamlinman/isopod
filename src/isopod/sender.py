@@ -10,7 +10,7 @@ from threading import Thread
 from sqlalchemy import select
 
 import isopod
-from isopod.store import Disc, DiscStatus, Session
+from isopod.db import Disc, DiscStatus, Session
 
 log = logging.getLogger(__name__)
 retry_base_sec = 5
