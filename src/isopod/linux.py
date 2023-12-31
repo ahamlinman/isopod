@@ -4,16 +4,16 @@ from typing import Iterable, Optional
 from pyudev import Context, Device, Devices, Enumerator
 
 
-class LocalContext(local):
+class UdevThreadLocal(local):
     def __init__(self):
-        self.ctx = Context()
+        self.context = Context()
 
 
-CTX = LocalContext()
+UDEV = UdevThreadLocal()
 
 
 def get_device(path: str) -> Device:
-    return Devices.from_device_file(CTX.ctx, path)
+    return Devices.from_device_file(UDEV.context, path)
 
 
 def get_diskseq(dev: str | Device) -> Optional[str]:
@@ -27,7 +27,7 @@ def get_fs_label(dev: str | Device) -> Optional[str]:
 
 
 def get_cdrom_drives() -> Iterable[Device]:
-    return Enumerator(CTX.ctx).match_property("ID_CDROM", "1")
+    return Enumerator(UDEV.context).match_property("ID_CDROM", "1")
 
 
 def is_cdrom_drive(dev: str | Device) -> bool:

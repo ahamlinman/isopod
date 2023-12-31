@@ -8,7 +8,7 @@ from subprocess import DEVNULL
 import click
 from pyudev import Context, Device, Monitor
 
-import isopod.udev
+import isopod.linux
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -23,7 +23,7 @@ def cli():
 @cli.command()
 def list():
     """List CD-ROM devices on the system."""
-    for dev in isopod.udev.get_cdrom_drives():
+    for dev in isopod.linux.get_cdrom_drives():
         _print_cdrom_info(dev)
 
 
@@ -33,14 +33,14 @@ def monitor():
     context = Context()
     monitor = Monitor.from_netlink(context)
     for dev in iter(monitor.poll, None):
-        if isopod.udev.is_cdrom_drive(dev):
+        if isopod.linux.is_cdrom_drive(dev):
             _print_cdrom_info(dev)
 
 
 def _print_cdrom_info(dev: Device):
-    loaded = isopod.udev.is_cdrom_loaded(dev)
-    diskseq = isopod.udev.get_diskseq(dev)
-    label = isopod.udev.get_fs_label(dev)
+    loaded = isopod.linux.is_cdrom_loaded(dev)
+    diskseq = isopod.linux.get_diskseq(dev)
+    label = isopod.linux.get_fs_label(dev)
     print(f"{dev.device_node}\t{loaded}\t{diskseq}\t{label}")
 
 

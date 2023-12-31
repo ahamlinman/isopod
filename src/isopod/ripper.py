@@ -12,7 +12,7 @@ from typing import Callable, Optional
 from pyudev import Context, Device, Monitor, MonitorObserver
 
 import isopod
-import isopod.udev
+import isopod.linux
 from isopod import db
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class Controller(Thread):
     def __init__(self, device_path: str, on_rip_success: Callable):
         super().__init__(daemon=True)
 
-        self.device = isopod.udev.get_device(device_path)
+        self.device = isopod.linux.get_device(device_path)
         self.on_rip_success = on_rip_success
 
         self.state = DriveUnloaded()
@@ -80,9 +80,9 @@ class Controller(Thread):
 
     def _handle_device_event(self, dev: Device):
         if dev == self.device:
-            if isopod.udev.is_cdrom_loaded(dev):
-                diskseq = isopod.udev.get_diskseq(dev)
-                label = isopod.udev.get_fs_label(dev)
+            if isopod.linux.is_cdrom_loaded(dev):
+                diskseq = isopod.linux.get_diskseq(dev)
+                label = isopod.linux.get_fs_label(dev)
                 self.next_states.put(DriveLoaded(diskseq=diskseq, label=label))
             else:
                 self.next_states.put(DriveUnloaded())
