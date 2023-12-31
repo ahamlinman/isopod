@@ -42,11 +42,12 @@ def main(device, workdir):
         log.critical("Not running as root")
         return 1
 
-    # TODO: Remove echo=True at some point when things are more stable.
-    db_path = os.path.join(workdir, "isopod.sqlite3")
-    isopod.store.setup(create_engine(f"sqlite+pysqlite:///{db_path}", echo=True))
+    os.chdir(workdir)
 
-    ripper = isopod.ripper.Controller(device, workdir)
+    # TODO: Remove echo=True at some point when things are more stable.
+    isopod.store.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3", echo=True))
+
+    ripper = isopod.ripper.Controller(device)
     ripper.start()
 
     # TODO: Something other than blocking forever, e.g. wait for a signal and

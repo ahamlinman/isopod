@@ -33,11 +33,10 @@ class DriveUnloaded(DriveState):
 
 
 class Controller(Thread):
-    def __init__(self, device_path: str, staging_dir: str):
+    def __init__(self, device_path: str):
         super().__init__(daemon=True)
 
         self.device = isopod.udev.get_device(device_path)
-        self.staging_dir = staging_dir
         self.state = DriveUnloaded()
         self.next_states: Queue[DriveState] = Queue()
         self.ripper: Optional[Ripper] = None
@@ -68,11 +67,10 @@ class Controller(Thread):
             if isinstance(self.state, DriveLoaded):
                 log.info("Starting new ripper")
                 src = self.device.device_node
-                filename = str(time.time()).replace(".", "")
+                dst = str(time.time()).replace(".", "")
                 if self.state.label:
-                    filename += f"_{self.state.label}"
-                filename += ".iso"
-                dst = os.path.join(self.staging_dir, filename)
+                    dst += f"_{self.state.label}"
+                dst += ".iso"
                 self.ripper = Ripper(src, dst)
                 self.ripper.start()
 
