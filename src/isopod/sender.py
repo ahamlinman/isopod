@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import subprocess
 import threading
@@ -11,17 +12,16 @@ from sqlalchemy import select
 from isopod.store import Disc, DiscStatus, Session
 
 log = logging.getLogger(__name__)
+retry_base_sec = 5
+retry_max_sec = 300
 
 
 class Controller(Thread):
     def __init__(self, target_base: str):
         super().__init__(daemon=True)
-
-        if not target_base.endswith("/"):
-            target_base += "/"
-
-        self.target_base = target_base
+        self.target_base = target_base.removesuffix("/")
         self.trigger = threading.Event()
+        self.retries = 0
 
     def run(self):
         self.trigger.set()
@@ -36,10 +36,17 @@ class Controller(Thread):
             proc = subprocess.run(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
 
             if proc.returncode == 0:
+                self.retries = 0
                 self._handle_send_success(path)
             else:
-                log.error("Sync failed with status %d", proc.returncode)
-                time.sleep(10)  # TODO: Make this an exponential backoff.
+                self.retries += 1
+                interval = min(
+                    retry_max_sec, retry_base_sec * math.pow(2, self.retries - 1)
+                )
+                log.error(
+                    "Sync failed with status %d; waiting %ds", proc.returncode, interval
+                )
+                time.sleep(interval)
 
     def poke(self):
         self.trigger.set()
