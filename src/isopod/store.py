@@ -34,18 +34,3 @@ def setup(engine: Engine):
     log.info("Configuring state store: %s", engine)
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
-
-
-def list_discs(session: Session) -> list[Disc]:
-    # TODO: Consider keeping this an iterator.
-    return list(session.scalars(select(Disc)).all())
-
-
-def get_disc(session: Session, name: str) -> Disc:
-    try:
-        return session.execute(select(Disc).filter_by(name=name)).scalar_one()
-    except NoResultFound:
-        disc = Disc(name=name)
-        session.add(disc)
-        session.flush()
-        return disc

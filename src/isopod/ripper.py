@@ -50,8 +50,8 @@ class Controller(Thread):
     def run(self):
         self.udev_observer.start()
         self._handle_device_event(self.device)
+        log.info("Started device monitor")
 
-        log.info("Starting control loop")
         while next_state := self.next_states.get():
             if self.state == next_state:
                 continue
