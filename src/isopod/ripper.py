@@ -214,18 +214,19 @@ class Ripper(Thread):
             disc_size = blk.seek(0, io.SEEK_END)
             need_free = disc_size + self.min_free_bytes
 
-        if need_free > (total := shutil.disk_usage(".").total):
+        filesystem_size = shutil.disk_usage(".").total
+        if need_free > filesystem_size:
             log.error(
                 "Disc too large; need %d bytes free, have %d total in filesystem",
                 need_free,
-                total,
+                filesystem_size,
             )
             self.terminal = True
             self.terminating = True
             return False
 
         while (free := shutil.disk_usage(".").free) < need_free:
-            log.info("%d bytes free, need at least %d", free, need_free)
+            log.info("%d bytes free, waiting for at least %d", free, need_free)
             if self.trigger.wait(timeout=30) and self.terminal:
                 self.trigger.clear()
                 self.terminating = True

@@ -13,8 +13,6 @@ import isopod
 from isopod import db
 
 log = logging.getLogger(__name__)
-retry_base_sec = 5
-retry_max_sec = 300
 
 
 class Controller(Thread):
@@ -41,6 +39,8 @@ class Controller(Thread):
                 self._handle_send_success(path)
             else:
                 self.retries += 1
+                retry_base_sec = 5
+                retry_max_sec = 300
                 interval = min(
                     retry_max_sec, retry_base_sec * math.pow(2, self.retries - 1)
                 )
