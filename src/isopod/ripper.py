@@ -82,7 +82,7 @@ class Controller(Thread):
                 log.info("Current disc is already ripped and ready to send")
                 self.state = next_state
                 continue
-            elif self.state == next_state:
+            if self.state == next_state:
                 continue
 
             self.state = next_state
@@ -105,11 +105,20 @@ class Controller(Thread):
                 self.ripper.start()
 
     def _handle_device_event(self, dev: Device):
-        if dev == self.device:
-            if isopod.linux.is_cdrom_loaded(dev):
-                self.next_states.put(DriveLoaded(dev))
-            else:
-                self.next_states.put(DriveUnloaded())
+        if dev != self.device:
+            return
+
+        if not isopod.linux.is_cdrom_loaded(dev):
+            self.next_states.put(DriveUnloaded())
+            return
+
+        if isinstance(self.state, DriveLoaded):
+            old_seq = isopod.linux.get_diskseq(self.state.device)
+            new_seq = isopod.linux.get_diskseq(dev)
+            if old_seq and new_seq and int(old_seq) >= int(new_seq):
+                return
+
+        self.next_states.put(DriveLoaded(dev))
 
 
 class Ripper(Thread):
