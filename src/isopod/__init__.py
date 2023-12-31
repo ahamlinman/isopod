@@ -79,6 +79,8 @@ def main(workdir, device, target, min_free_bytes):
     ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
     ripper.start()
 
+    # TODO: A status layer that can handle refreshing a small display.
+
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Signaled to stop; waiting for any active rip to finish")
 

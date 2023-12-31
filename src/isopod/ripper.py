@@ -205,6 +205,11 @@ class Ripper(Thread):
             return
 
     def _wait_for_min_free(self):
+        # TODO: Since this check runs on a non-daemon thread, it blocks graceful
+        # shutdown. It seems like we really do need to think about clean
+        # shutdown ourselves, rather than trying to pawn this off to Python's
+        # handling of non-daemon threads.
+
         with open(self.src_device.device_node, "rb") as blk:
             disc_size = blk.seek(0, io.SEEK_END)
             need_free = disc_size + self.min_free_bytes
