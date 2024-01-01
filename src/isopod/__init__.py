@@ -3,6 +3,7 @@ import os
 import os.path
 import shutil
 import signal
+import sys
 import threading
 
 import click
@@ -58,13 +59,13 @@ def main(workdir, device, target, min_free_bytes):
     if missing_cmds:
         log.critical("Missing required commands: %s", missing_cmds)
         log.critical("Isopod needs these installed to rip and send discs")
-        os.exit(1)
+        sys.exit(1)
 
     if isopod.linux.get_diskseq(device) is None:
         log.critical("%s has no diskseq property in udev", device)
         log.critical("Isopod will behave erratically in this configuration")
         log.critical("Try a newer kernel, systemd, udev, etc.")
-        os.exit(1)
+        sys.exit(1)
 
     workdir = os.path.abspath(workdir)
     log.info("Entering workdir: %s", workdir)

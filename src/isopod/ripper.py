@@ -24,7 +24,7 @@ class DriveState:
     @property
     def diskseq(self):
         if hasattr(self, "device"):
-            return isopod.linux.get_diskseq(self.device)
+            return isopod.linux.get_diskseq(getattr(self, "device"))
         else:
             return None
 

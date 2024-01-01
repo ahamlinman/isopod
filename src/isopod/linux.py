@@ -27,13 +27,13 @@ def get_diskseq(dev: str | Device) -> Optional[str]:
     return dev.properties.get("DISKSEQ")
 
 
-def get_source_hash(dev: str | Device) -> bytes:
+def get_source_hash(dev: str | Device) -> Optional[bytes]:
     dev = get_device(dev) if isinstance(dev, str) else dev
-    ascii_unit_sep = b"\x1f"
-    data = ascii_unit_sep.join(
-        (x.encode("utf-8") for x in (get_boot_id(), dev.device_path, get_diskseq(dev)))
-    )
-    return sha256(data).digest()
+    parts = [get_boot_id(), dev.device_path, get_diskseq(dev)]
+    if any(p is None for p in parts):
+        return None
+    unit_sep = b"\x1f"
+    return sha256(unit_sep.join((p.encode("utf-8") for p in parts))).digest()
 
 
 def get_fs_label(dev: str | Device) -> Optional[str]:
