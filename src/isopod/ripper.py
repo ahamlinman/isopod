@@ -210,7 +210,7 @@ class Ripper(Thread):
         # shutdown ourselves, rather than trying to pawn this off to Python's
         # handling of non-daemon threads.
 
-        with open(self.src_device.device_node, "rb") as blk:
+        with open(self.src_device.device_node, "rb") as blk:  # type: ignore
             disc_size = blk.seek(0, io.SEEK_END)
             need_free = disc_size + self.min_free_bytes
 
