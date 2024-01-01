@@ -10,8 +10,8 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
+import isopod.oldsender
 import isopod.ripper
-import isopod.sender
 from isopod import db
 
 logging.basicConfig(
@@ -74,7 +74,7 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    sender = isopod.sender.Controller(target)
+    sender = isopod.oldsender.Controller(target)
     sender.start()
 
     ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
