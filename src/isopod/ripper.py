@@ -33,6 +33,9 @@ class DriveState:
 class DrivePreloaded(DriveState):
     device: Device
 
+    def __repr__(self):
+        return f"DrivePreloaded({self.device.device_node}, diskseq={self.diskseq})"
+
 
 @dataclass
 class DriveLoaded(DriveState):
@@ -44,6 +47,9 @@ class DriveLoaded(DriveState):
             and self.device == other.device
             and self.diskseq == other.diskseq
         )
+
+    def __repr__(self):
+        return f"DriveLoaded({self.device.device_node}, diskseq={self.diskseq})"
 
 
 @dataclass
@@ -87,19 +93,18 @@ class Controller(Thread):
         log.info("Started device monitor")
 
         while next_state := self.next_states.get():
-            if self.state == next_state:
+            (last_state, self.state) = (self.state, next_state)
+            if last_state == next_state:
                 continue
+
+            log.info("State changed from %s to %s", last_state, next_state)
 
             if (
-                isinstance(self.state, DrivePreloaded)
-                and self.state.diskseq == next_state.diskseq
+                isinstance(last_state, DrivePreloaded)
+                and last_state.diskseq == next_state.diskseq
             ):
                 log.info("Current disc is already ripped and ready to send")
-                self.state = next_state
                 continue
-
-            self.state = next_state
-            log.info("Drive state changed: %s", self.state)
 
             if self.ripper is not None:
                 log.info("Finalizing previous ripper")
@@ -107,9 +112,9 @@ class Controller(Thread):
                 self.ripper.join()
                 self.ripper = None
 
-            if isinstance(self.state, DriveLoaded):
+            if isinstance(next_state, DriveLoaded):
                 log.info("Starting new ripper")
-                self.device = self.state.device
+                self.device = next_state.device
                 dst = str(time.time_ns())
                 if label := isopod.linux.get_fs_label(self.device):
                     dst += f"_{label}"
