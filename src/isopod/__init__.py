@@ -10,7 +10,6 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
-import isopod.oldsender
 import isopod.ripper
 import isopod.sender
 from isopod import db
@@ -52,10 +51,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     default=5 * (1024**3),
     help="Only rip when this much space will be free after",
 )
-@click.option(
-    "--use-legacy-sender", is_flag=True, help="Use the old sender implementation"
-)
-def main(workdir, device, target, min_free_bytes, use_legacy_sender):
+def main(workdir, device, target, min_free_bytes):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -78,12 +74,8 @@ def main(workdir, device, target, min_free_bytes, use_legacy_sender):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    if not use_legacy_sender:
-        sender = isopod.sender.Sender(target)
-        sender.poll()
-    else:
-        sender = isopod.oldsender.Controller(target)
-        sender.start()
+    sender = isopod.sender.Sender(target)
+    sender.poll()
 
     ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poll)
     ripper.start()
@@ -92,8 +84,7 @@ def main(workdir, device, target, min_free_bytes, use_legacy_sender):
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Signaled to stop; waiting for any active rip to finish")
-    if isinstance(sender, isopod.sender.Sender):
-        sender.cancel()
+    sender.cancel()
 
 
 def force_unlink(path):
