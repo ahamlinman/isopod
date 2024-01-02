@@ -10,7 +10,7 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
-import isopod.oldsender
+import isopod.newsender
 import isopod.ripper
 from isopod import db
 
@@ -74,7 +74,7 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    sender = isopod.oldsender.Controller(target)
+    sender = isopod.newsender.Controller(target)
     sender.start()
 
     ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
@@ -83,6 +83,7 @@ def main(workdir, device, target, min_free_bytes):
     # TODO: A status layer that can handle refreshing a small display.
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
+    sender.cancel()
     log.info("Signaled to stop; waiting for any active rip to finish")
 
 

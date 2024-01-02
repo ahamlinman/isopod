@@ -33,8 +33,10 @@ class Controller(Thread):
 
             if self._canceled:
                 if self._rsync is not None:
+                    log.info("Terminating sync")
                     self._rsync.terminate()
                     self._rsync.wait()
+                    log.info("Sync terminated")
                 return
 
             if self._rsync is not None:
@@ -57,7 +59,15 @@ class Controller(Thread):
             args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
             self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
             self._current_path = path
+            self._poke_on_finish(self._rsync)
             log.info("Started: %s", shlex.join(args))
+
+    def _poke_on_finish(self, proc: Popen):
+        def wait_and_poke():
+            proc.wait()
+            self.poke()
+
+        Thread(target=wait_and_poke, daemon=True).start()
 
     def _get_next_path(self):
         with db.Session() as session:
@@ -79,6 +89,9 @@ class Controller(Thread):
             session.commit()
             log.info("Cleaned up %s", path)
 
+    def poke(self):
+        self._trigger.set()
+
     def cancel(self):
         self._canceled = True
-        self._trigger.set()
+        self.poke()
