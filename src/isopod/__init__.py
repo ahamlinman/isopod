@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, select
 
 import isopod.linux
 import isopod.newsender
+import isopod.oldsender
 import isopod.ripper
 from isopod import db
 
@@ -51,7 +52,8 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     default=5 * (1024**3),
     help="Only rip when this much space will be free after",
 )
-def main(workdir, device, target, min_free_bytes):
+@click.option("--new-sender", is_flag=True, help="Use the new sender implementation")
+def main(workdir, device, target, min_free_bytes, new_sender):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -74,7 +76,11 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    sender = isopod.newsender.Controller(target)
+    if new_sender:
+        sender = isopod.newsender.Controller(target)
+    else:
+        sender = isopod.oldsender.Controller(target)
+
     sender.start()
 
     ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
@@ -83,8 +89,9 @@ def main(workdir, device, target, min_free_bytes):
     # TODO: A status layer that can handle refreshing a small display.
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
-    sender.cancel()
     log.info("Signaled to stop; waiting for any active rip to finish")
+    if isinstance(sender, isopod.newsender.Controller):
+        sender.cancel()
 
 
 def force_unlink(path):

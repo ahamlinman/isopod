@@ -47,8 +47,11 @@ class Controller(Thread):
                 if returncode == 0:
                     self._handle_send_success(path)
                 else:
+                    # TODO: Improved backoff strategy: handle the case of a
+                    # single ISO being unsendable (e.g. unexpected deletion) and
+                    # retry exponentially.
                     log.info("rsync failed with status %d", returncode)
-                    time.sleep(10)  # TODO: Restore exponential backoff.
+                    time.sleep(10)
                     self._trigger.set()
                 continue
 
