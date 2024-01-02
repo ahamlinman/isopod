@@ -32,7 +32,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def shutdown(self):
+    def cleanup(self):
         pass
 
     def poll(self):
@@ -63,7 +63,7 @@ class Controller(ABC):
             self._trigger.clear()
 
             if self._canceled:
-                self.shutdown()  # TODO: Wait for things to actually be done.
+                self.cleanup()
                 return
 
             match self.reconcile():

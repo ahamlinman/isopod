@@ -93,7 +93,7 @@ class Ripper(Controller):
         log.info("Running: %s", shlex.join(args))
         return Reconciled()
 
-    def shutdown(self):
+    def cleanup(self):
         self._udev_observer.stop()
         if self._ripper is not None:
             log.info("Waiting for in-flight rip to finish")
