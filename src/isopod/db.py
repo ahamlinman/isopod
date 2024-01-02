@@ -34,5 +34,5 @@ class Disc(Base):
     path: Mapped[str] = mapped_column(primary_key=True)
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
     source_hash: Mapped[Optional[bytes]]
-    send_attempts: Mapped[int] = mapped_column(default=0)
-    last_send_failure: Mapped[Optional[datetime.datetime]]
+    send_errors: Mapped[int] = mapped_column(default=0)
+    next_send_attempt: Mapped[Optional[datetime.datetime]]

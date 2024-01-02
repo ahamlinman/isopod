@@ -90,6 +90,6 @@ class Sender(Controller):
             stmt = (
                 select(db.Disc)
                 .filter_by(status=db.DiscStatus.SENDABLE)
-                .order_by(db.Disc.send_attempts, db.Disc.last_send_failure)
+                .order_by(db.Disc.send_errors, db.Disc.next_send_attempt)
             )
             return session.execute(stmt).scalars().first()
