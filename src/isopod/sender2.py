@@ -23,22 +23,8 @@ class Sender(Controller):
         self._current_path: Optional[str] = None
 
     def reconcile(self):
-        if self._rsync is not None:
-            if (returncode := self._rsync.poll()) is None:
-                return
-
-            self._rsync = None
-            (path, self._current_path) = (self._current_path, None)
-            if returncode == 0:
-                self._handle_send_success(path)
-            else:
-                # TODO: Improved backoff strategy: handle the case of a
-                # single ISO being unsendable (e.g. unexpected deletion) and
-                # retry exponentially.
-                log.info("rsync failed with status %d", returncode)
-                time.sleep(10)
-                self.poll()
-                return
+        if not self._finalize_rsync():
+            return
 
         if (path := self._get_next_path()) is None:
             log.info("Waiting for next sendable disc")
@@ -52,26 +38,32 @@ class Sender(Controller):
 
     def cleanup(self):
         if self._rsync is not None:
-            log.info("Terminating sync")
+            log.info("Canceling in-flight sync")
             self._rsync.terminate()
             self._rsync.wait()
-            log.info("Sync terminated")
 
-    def _poll_on_finish(self, proc: Popen):
-        def wait_and_poke():
-            proc.wait()
+    def _finalize_rsync(self) -> bool:
+        if self._rsync is None:
+            return True
+
+        if (returncode := self._rsync.poll()) is None:
+            return False
+
+        path = self._current_path
+        self._rsync = None
+        self._current_path = None
+        if returncode == 0:
+            self._finalize_rsync_success(path)
+        else:
+            # TODO: Improved backoff strategy: handle the case of a
+            # single ISO being unsendable (e.g. unexpected deletion) and
+            # retry exponentially.
+            log.info("rsync failed with status %d", returncode)
             self.poll()
 
-        Thread(target=wait_and_poke, daemon=True).start()
+        return True
 
-    def _get_next_path(self):
-        with db.Session() as session:
-            stmt = select(db.Disc).filter_by(status=db.DiscStatus.SENDABLE)
-            disc = session.execute(stmt).scalars().first()
-            if disc is not None:
-                return disc.path
-
-    def _handle_send_success(self, path):
+    def _finalize_rsync_success(self, path):
         with db.Session() as session:
             stmt = select(db.Disc).filter_by(path=path)
             disc = session.execute(stmt).scalar_one()
@@ -83,3 +75,17 @@ class Sender(Controller):
             session.delete(disc)
             session.commit()
             log.info("Cleaned up %s", path)
+
+    def _poll_on_finish(self, proc: Popen):
+        def wait_and_poll():
+            proc.wait()
+            self.poll()
+
+        Thread(target=wait_and_poll, daemon=True).start()
+
+    def _get_next_path(self):
+        with db.Session() as session:
+            stmt = select(db.Disc).filter_by(status=db.DiscStatus.SENDABLE)
+            disc = session.execute(stmt).scalars().first()
+            if disc is not None:
+                return disc.path
