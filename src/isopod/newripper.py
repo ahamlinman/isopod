@@ -47,9 +47,7 @@ class Ripper(Controller):
         device = isopod.linux.get_device(self.device_path)
         if not isopod.linux.is_cdrom_loaded(device):
             if self._ripper is not None:
-                log.info("Terminating ripper process due to disc removal")
                 self._ripper.terminate()
-            return Reconciled()
 
         if self._ripper is not None:
             match self._ripper.poll():
@@ -61,6 +59,9 @@ class Ripper(Controller):
                 case returncode:
                     log.info("Rip failed with code %d", returncode)
                     self._finalize_rip_failure()
+
+        if not isopod.linux.is_cdrom_loaded(device):
+            return Reconciled()
 
         source_hash = isopod.linux.get_source_hash(device)
         if self._last_source_hash == source_hash:
@@ -87,6 +88,7 @@ class Ripper(Controller):
             session.add(disc)
             session.commit()
 
+        self._last_source_hash = source_hash
         args = ["ddrescue", "--retry-passes=2", "--timeout=300", self.device_path, path]
         self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._poll_after_rip, daemon=True).start()
@@ -121,10 +123,10 @@ class Ripper(Controller):
             stmt = select(db.Disc).filter_by(
                 status=db.DiscStatus.RIPPABLE, source_hash=self._last_source_hash
             )
-            disc = session.execute(stmt).scalar_one()
-            isopod.force_unlink(disc.path)
-            session.delete(disc)
-            session.commit()
+            if disc := session.execute(stmt).scalar_one_or_none():
+                isopod.force_unlink(disc.path)
+                session.delete(disc)
+                session.commit()
 
         self._ripper = None
 
