@@ -1,3 +1,4 @@
+import datetime
 import logging
 from enum import Enum, auto
 from typing import Optional
@@ -33,3 +34,5 @@ class Disc(Base):
     path: Mapped[str] = mapped_column(primary_key=True)
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
     source_hash: Mapped[Optional[bytes]]
+    send_attempts: Mapped[int] = mapped_column(default=0)
+    last_send_failure: Mapped[Optional[datetime.datetime]]
