@@ -10,9 +10,9 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
-import isopod.newsender
-import isopod.oldsender
 import isopod.ripper
+import isopod.sender1
+import isopod.sender2
 from isopod import db
 
 logging.basicConfig(
@@ -52,7 +52,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     default=5 * (1024**3),
     help="Only rip when this much space will be free after",
 )
-@click.option("--new-sender", is_flag=True, help="Use the new sender implementation")
+@click.option("--use-sender2", is_flag=True, help="Use the rewritten sender")
 def main(workdir, device, target, min_free_bytes, new_sender):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
@@ -77,9 +77,9 @@ def main(workdir, device, target, min_free_bytes, new_sender):
     cleanup_stale_discs()
 
     if new_sender:
-        sender = isopod.newsender.Controller(target)
+        sender = isopod.sender2.Controller(target)
     else:
-        sender = isopod.oldsender.Controller(target)
+        sender = isopod.sender1.Controller(target)
 
     sender.start()
 
@@ -90,7 +90,7 @@ def main(workdir, device, target, min_free_bytes, new_sender):
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Signaled to stop; waiting for any active rip to finish")
-    if isinstance(sender, isopod.newsender.Controller):
+    if isinstance(sender, isopod.sender2.Controller):
         sender.cancel()
 
 
