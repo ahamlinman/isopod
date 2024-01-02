@@ -19,15 +19,18 @@ class Sender(Controller):
         super().__init__()
         self.target_base = target_base
 
+        self._rsync = None
+        self._current_disc = None
+
     def reconcile(self) -> Result:
         if self._rsync is not None:
-            returncode = self._rsync.poll()
-            if returncode is None:
-                return Reconciled()
-            elif returncode == 0:
-                self._finalize_rsync_success()
-            else:
-                self._finalize_rsync_failure()
+            match self._rsync.poll():
+                case None:
+                    return Reconciled()
+                case 0:
+                    self._finalize_rsync_success()
+                case _:
+                    self._finalize_rsync_failure()
 
         if (disc := self._get_next_disc()) is None:
             log.info("Waiting for next sendable disc")
@@ -43,7 +46,7 @@ class Sender(Controller):
         args = ["rsync", "--partial", disc.path, f"{self.target_base}/{disc.path}"]
         self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         self._current_disc = disc
-        self._poll_on_finish(self._rsync)
+        Thread(target=self._poll_after_rsync, daemon=True).start()
         log.info("Started: %s", shlex.join(args))
         return Reconciled()
 
@@ -91,13 +94,6 @@ class Sender(Controller):
             session.merge(disc)
             session.commit()
 
-    def _poll_on_finish(self, proc: Popen):
-        def wait_and_poll():
-            proc.wait()
-            self.poll()
-
-        Thread(target=wait_and_poll, daemon=True).start()
-
     def _get_next_disc(self):
         with db.Session() as session:
             stmt = (
@@ -106,3 +102,10 @@ class Sender(Controller):
                 .order_by(db.Disc.next_send_attempt.asc())
             )
             return session.execute(stmt).scalars().first()
+
+    def _poll_after_rsync(self):
+        if self._rsync is None:
+            raise TypeError("missing rsync process")
+
+        self._rsync.wait()
+        self.poll()
