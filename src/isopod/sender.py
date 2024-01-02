@@ -19,9 +19,6 @@ class Sender(Controller):
         super().__init__()
         self.target_base = target_base
 
-        self._rsync: Optional[Popen] = None
-        self._current_path: Optional[str] = None
-
     def reconcile(self) -> Result:
         if self._rsync is not None:
             returncode = self._rsync.poll()
