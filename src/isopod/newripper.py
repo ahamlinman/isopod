@@ -27,14 +27,14 @@ class Ripper(Controller):
         self._ripper = None
         with db.Session() as session:
             stmt = (
-                select(db.Disc)
+                select(db.Disc.source_hash)
                 .filter_by(
                     status=db.DiscStatus.SENDABLE,
                     source_hash=isopod.linux.get_source_hash(device_path),
                 )
                 .limit(1)
             )
-            self._last_disc = session.execute(stmt).scalar_one_or_none()
+            self._last_source_hash = session.execute(stmt).scalar_one_or_none()
 
         self._udev_monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
         self._udev_observer = MonitorObserver(
@@ -63,7 +63,7 @@ class Ripper(Controller):
                     self._finalize_rip_failure()
 
         source_hash = isopod.linux.get_source_hash(device)
-        if self._last_disc is not None and self._last_disc.source_hash == source_hash:
+        if self._last_source_hash == source_hash:
             return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
@@ -81,10 +81,10 @@ class Ripper(Controller):
         )
 
         with db.Session() as session:
-            self._last_disc = db.Disc(
+            disc = db.Disc(
                 path=path, status=db.DiscStatus.RIPPABLE, source_hash=source_hash
             )
-            session.add(self._last_disc)
+            session.add(disc)
             session.commit()
 
         args = ["ddrescue", "--retry-passes=2", "--timeout=300", self.device_path, path]
@@ -105,22 +105,23 @@ class Ripper(Controller):
                 self._finalize_rip_failure()
 
     def _finalize_rip_success(self):
-        if (disc := self._last_disc) is None:
-            raise TypeError("missing disc")
-
         with db.Session() as session:
+            stmt = select(db.Disc).filter_by(
+                status=db.DiscStatus.RIPPABLE, source_hash=self._last_source_hash
+            )
+            disc = session.execute(stmt).scalar_one()
             disc.status = db.DiscStatus.SENDABLE
-            session.merge(disc)
             session.commit()
 
         self._ripper = None
         self.on_rip_success()
 
     def _finalize_rip_failure(self):
-        if (disc := self._last_disc) is None:
-            raise TypeError("missing disc")
-
         with db.Session() as session:
+            stmt = select(db.Disc).filter_by(
+                status=db.DiscStatus.RIPPABLE, source_hash=self._last_source_hash
+            )
+            disc = session.execute(stmt).scalar_one()
             isopod.force_unlink(disc.path)
             session.delete(disc)
             session.commit()
