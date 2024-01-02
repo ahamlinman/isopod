@@ -10,7 +10,7 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
-import isopod.ripper
+import isopod.newripper
 import isopod.sender
 from isopod import db
 
@@ -75,16 +75,14 @@ def main(workdir, device, target, min_free_bytes):
     cleanup_stale_discs()
 
     sender = isopod.sender.Sender(target)
-    sender.poll()
-
-    ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poll)
-    ripper.start()
+    ripper = isopod.newripper.Ripper(device, min_free_bytes, sender.poll)
 
     # TODO: A status layer that can handle refreshing a small display.
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
-    log.info("Signaled to stop; waiting for any active rip to finish")
+    log.info("Received stop signal, shutting down")
     sender.cancel()
+    ripper.cancel()
 
 
 def force_unlink(path):

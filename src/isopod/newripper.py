@@ -116,7 +116,6 @@ class Ripper(Controller):
             session.commit()
 
         self._rip_proc = None
-        self._rip_source = None
         self._rip_disc = None
         self.on_rip_success()
 
@@ -130,7 +129,6 @@ class Ripper(Controller):
             session.commit()
 
         self._rip_proc = None
-        self._rip_source = None
         self._rip_disc = None
 
     def _check_min_free_space(self) -> Optional[Result]:

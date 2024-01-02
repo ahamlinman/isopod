@@ -22,6 +22,8 @@ class Sender(Controller):
         self._rsync = None
         self._current_disc = None
 
+        self.poll()
+
     def reconcile(self) -> Result:
         if self._rsync is not None:
             match self._rsync.poll():
