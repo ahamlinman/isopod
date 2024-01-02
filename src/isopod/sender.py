@@ -23,9 +23,6 @@ class Sender(Controller):
         self._current_path: Optional[str] = None
 
     def reconcile(self) -> Result:
-        if (result := self._reconcile_with_rsync()) is not None:
-            return result
-
         if self._rsync is not None:
             returncode = self._rsync.poll()
             if returncode is None:
@@ -57,24 +54,6 @@ class Sender(Controller):
             log.info("Canceling in-flight sync")
             self._rsync.terminate()
             self._rsync.wait()
-
-    def _reconcile_with_rsync(self) -> Optional[Result]:
-        if self._rsync is None:
-            return None
-
-        if (returncode := self._rsync.poll()) is None:
-            return Reconciled()
-
-        if returncode == 0:
-            self._finalize_rsync_success()
-        else:
-            # TODO: Improved backoff strategy: handle the case of a
-            # single ISO being unsendable (e.g. unexpected deletion) and
-            # retry exponentially.
-            log.info("rsync failed with status %d", returncode)
-            self.poll()
-
-        return None
 
     def _finalize_rsync_success(self):
         with db.Session() as session:
