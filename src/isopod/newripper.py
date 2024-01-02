@@ -45,11 +45,13 @@ class Ripper(Controller):
 
     def reconcile(self) -> Result:
         device = isopod.linux.get_device(self.device_path)
-        if not isopod.linux.is_cdrom_loaded(device):
-            if self._ripper is not None:
-                self._ripper.terminate()
+        source_hash = isopod.linux.get_source_hash(device)
+        loaded = isopod.linux.is_cdrom_loaded(device)
 
         if self._ripper is not None:
+            if source_hash != self._last_source_hash or not loaded:
+                self._ripper.terminate()
+
             match self._ripper.poll():
                 case None:
                     return Reconciled()
@@ -60,11 +62,7 @@ class Ripper(Controller):
                     log.info("Rip failed with code %d", returncode)
                     self._finalize_rip_failure()
 
-        if not isopod.linux.is_cdrom_loaded(device):
-            return Reconciled()
-
-        source_hash = isopod.linux.get_source_hash(device)
-        if self._last_source_hash == source_hash:
+        if source_hash == self._last_source_hash or not loaded:
             return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
