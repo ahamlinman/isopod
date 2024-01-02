@@ -40,7 +40,7 @@ class Sender(Controller):
             delay = disc.next_send_attempt - datetime.datetime.utcnow()
             delay_sec = delay.total_seconds()
             if delay_sec > 0:
-                log.info("Will retry after %d second(s)", delay_sec)
+                log.info("Will retry after %0.1f second(s)", delay_sec)
                 return RepollAfter(seconds=delay_sec)
 
         args = ["rsync", "--partial", disc.path, f"{self.target_base}/{disc.path}"]
