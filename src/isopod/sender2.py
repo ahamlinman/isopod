@@ -1,6 +1,5 @@
 import logging
 import shlex
-import threading
 import time
 from subprocess import DEVNULL, Popen
 from threading import Thread
@@ -10,65 +9,58 @@ from sqlalchemy import select
 
 import isopod
 from isopod import db
+from isopod.controller import Controller
 
 log = logging.getLogger(__name__)
 
 
-class Controller(Thread):
+class Sender(Controller):
     def __init__(self, target_base: str):
         super().__init__()
         self.target_base = target_base
 
-        self._trigger = threading.Event()
-
-        self._canceled = False
-
         self._rsync: Optional[Popen] = None
         self._current_path: Optional[str] = None
 
-    def run(self):
-        self._trigger.set()
-        while self._trigger.wait():
-            self._trigger.clear()
-
-            if self._canceled:
-                if self._rsync is not None:
-                    log.info("Terminating sync")
-                    self._rsync.terminate()
-                    self._rsync.wait()
-                    log.info("Sync terminated")
+    def reconcile(self):
+        if self._rsync is not None:
+            if (returncode := self._rsync.poll()) is None:
                 return
 
-            if self._rsync is not None:
-                if (returncode := self._rsync.poll()) is None:
-                    continue
-                self._rsync = None
-                (path, self._current_path) = (self._current_path, None)
-                if returncode == 0:
-                    self._handle_send_success(path)
-                else:
-                    # TODO: Improved backoff strategy: handle the case of a
-                    # single ISO being unsendable (e.g. unexpected deletion) and
-                    # retry exponentially.
-                    log.info("rsync failed with status %d", returncode)
-                    time.sleep(10)
-                    self._trigger.set()
-                continue
+            self._rsync = None
+            (path, self._current_path) = (self._current_path, None)
+            if returncode == 0:
+                self._handle_send_success(path)
+            else:
+                # TODO: Improved backoff strategy: handle the case of a
+                # single ISO being unsendable (e.g. unexpected deletion) and
+                # retry exponentially.
+                log.info("rsync failed with status %d", returncode)
+                time.sleep(10)
+                self.poll()
+                return
 
-            if (path := self._get_next_path()) is None:
-                log.info("Waiting for next sendable disc")
-                continue
+        if (path := self._get_next_path()) is None:
+            log.info("Waiting for next sendable disc")
+            return
 
-            args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
-            self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
-            self._current_path = path
-            self._poke_on_finish(self._rsync)
-            log.info("Started: %s", shlex.join(args))
+        args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
+        self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+        self._current_path = path
+        self._poll_on_finish(self._rsync)
+        log.info("Started: %s", shlex.join(args))
 
-    def _poke_on_finish(self, proc: Popen):
+    def cleanup(self):
+        if self._rsync is not None:
+            log.info("Terminating sync")
+            self._rsync.terminate()
+            self._rsync.wait()
+            log.info("Sync terminated")
+
+    def _poll_on_finish(self, proc: Popen):
         def wait_and_poke():
             proc.wait()
-            self.poke()
+            self.poll()
 
         Thread(target=wait_and_poke, daemon=True).start()
 
@@ -91,10 +83,3 @@ class Controller(Thread):
             session.delete(disc)
             session.commit()
             log.info("Cleaned up %s", path)
-
-    def poke(self):
-        self._trigger.set()
-
-    def cancel(self):
-        self._canceled = True
-        self.poke()

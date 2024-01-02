@@ -77,13 +77,13 @@ def main(workdir, device, target, min_free_bytes, use_sender2):
     cleanup_stale_discs()
 
     if use_sender2:
-        sender = isopod.sender2.Controller(target)
+        sender = isopod.sender2.Sender(target)
+        sender.poll()
     else:
         sender = isopod.sender1.Controller(target)
+        sender.start()
 
-    sender.start()
-
-    ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poke)
+    ripper = isopod.ripper.Controller(device, min_free_bytes, sender.poll)
     ripper.start()
 
     # TODO: A status layer that can handle refreshing a small display.

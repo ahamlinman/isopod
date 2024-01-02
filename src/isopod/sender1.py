@@ -49,7 +49,7 @@ class Controller(Thread):
                 )
                 time.sleep(interval)
 
-    def poke(self):
+    def poll(self):
         self.trigger.set()
 
     def _get_next_path(self):
