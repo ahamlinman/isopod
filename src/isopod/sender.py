@@ -1,3 +1,4 @@
+import datetime
 import logging
 import shlex
 from subprocess import DEVNULL, Popen
@@ -8,7 +9,7 @@ from sqlalchemy import select
 
 import isopod
 from isopod import db
-from isopod.controller import Controller, Reconciled, Result
+from isopod.controller import Controller, Reconciled, RepollAfter, Result
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +26,24 @@ class Sender(Controller):
         if (result := self._reconcile_with_rsync()) is not None:
             return result
 
+        if self._rsync is not None:
+            returncode = self._rsync.poll()
+            if returncode is None:
+                return Reconciled()
+            elif returncode == 0:
+                self._finalize_rsync_success()
+            else:
+                self._finalize_rsync_failure()
+
         if (disc := self._get_next_disc()) is None:
             log.info("Waiting for next sendable disc")
             return Reconciled()
+
+        if disc.next_send_attempt is not None:
+            delay = disc.next_send_attempt - datetime.datetime.now()
+            if delay.total_seconds() > 0:
+                log.info("Waiting until %s to retry sending", disc.next_send_attempt)
+                return RepollAfter(seconds=delay.total_seconds())
 
         args = ["rsync", "--partial", disc.path, f"{self.target_base}/{disc.path}"]
         self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
@@ -77,6 +93,26 @@ class Sender(Controller):
             session.delete(disc)
             session.commit()
             log.info("Cleaned up %s", disc.path)
+
+    def _finalize_rsync_failure(self):
+        with db.Session() as session:
+            if (disc := self._current_disc) is None:
+                raise TypeError("missing current disc")
+
+            self._rsync = None
+            self._current_disc = None
+
+            disc.send_errors += 1
+            retry_base_sec = 5
+            retry_max_sec = 300
+            disc.next_send_attempt = datetime.datetime.now() + datetime.timedelta(
+                seconds=min(
+                    retry_max_sec, retry_base_sec * (2 ** (disc.send_errors - 1))
+                )
+            )
+            session.merge(disc)
+            session.commit()
+            log.info("Marked disc for future retry")
 
     def _poll_on_finish(self, proc: Popen):
         def wait_and_poll():
