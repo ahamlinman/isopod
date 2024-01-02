@@ -52,7 +52,7 @@ class Sender(Controller):
 
     def cleanup(self):
         if self._rsync is not None:
-            log.info("Canceling in-flight sync")
+            log.info("Canceling in-flight send")
             self._rsync.terminate()
             self._rsync.wait()
 
