@@ -52,7 +52,7 @@ class Sender(Controller):
         log.info("Started: %s", shlex.join(args))
         return Reconciled()
 
-    def cleanup(self):
+    def shutdown(self):
         if self._rsync is not None:
             log.info("Canceling in-flight send")
             self._rsync.terminate()

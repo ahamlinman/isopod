@@ -32,7 +32,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def cleanup(self):
+    def shutdown(self):
         pass
 
     def poll(self):
@@ -51,7 +51,7 @@ class Controller(ABC):
             self._run_reconciler()
         except Exception as e:
             traceback.print_exception(e)
-            os._exit(100)
+            os._exit(100)  # TODO: Think about other possibilities.
 
     def _run_reconciler(self):
         while self._trigger.wait():
@@ -63,7 +63,7 @@ class Controller(ABC):
             self._trigger.clear()
 
             if self._canceled:
-                self.cleanup()
+                self.shutdown()  # TODO: Wait for things to actually be done.
                 return
 
             match self.reconcile():
