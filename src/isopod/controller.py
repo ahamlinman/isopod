@@ -1,4 +1,5 @@
-import time
+import os
+import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Event, Thread
@@ -46,6 +47,13 @@ class Controller(ABC):
         return self._canceled
 
     def _run(self):
+        try:
+            self._run_reconciler()
+        except Exception as e:
+            traceback.print_exception(e)
+            os._exit(100)
+
+    def _run_reconciler(self):
         while self._trigger.wait():
             if self._repoller is not None:
                 self._repoller.cancel()
