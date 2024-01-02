@@ -96,7 +96,12 @@ class Ripper(Controller):
         self._udev_observer.stop()
         if self._rip_proc is not None:
             log.info("Waiting for in-flight rip to finish")
-            self._rip_proc.wait()
+            if (code := self._rip_proc.wait()) == 0:
+                log.info("Rip succeeded")
+                self._finalize_rip_success()
+            else:
+                log.info("Rip failed with code %d", code)
+                self._finalize_rip_failure()
 
     def _finalize_rip_success(self):
         if (disc := self._rip_disc) is None:
