@@ -24,17 +24,17 @@ class Ripper(Controller):
         self.min_free_bytes = min_free_bytes
         self.on_rip_success = on_rip_success
 
-        self._rip_proc = None
-        self._rip_source = isopod.linux.get_source_hash(self.device_path)
-        self._rip_disc = None
+        self._ripper = None
         with db.Session() as session:
             stmt = (
-                select(func.count())
-                .select_from(db.Disc)
-                .filter_by(status=db.DiscStatus.SENDABLE, source_hash=self._rip_source)
+                select(db.Disc)
+                .filter_by(
+                    status=db.DiscStatus.SENDABLE,
+                    source_hash=isopod.linux.get_source_hash(device_path),
+                )
+                .limit(1)
             )
-            if session.execute(stmt).scalar_one() == int(0):
-                self._rip_source = None
+            self._last_disc = session.execute(stmt).scalar_one_or_none()
 
         self._udev_monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
         self._udev_observer = MonitorObserver(
@@ -46,13 +46,13 @@ class Ripper(Controller):
     def reconcile(self) -> Result:
         device = isopod.linux.get_device(self.device_path)
         if not isopod.linux.is_cdrom_loaded(device):
-            if self._rip_proc is not None:
+            if self._ripper is not None:
                 log.info("Terminating ripper process due to disc removal")
-                self._rip_proc.terminate()
+                self._ripper.terminate()
             return Reconciled()
 
-        if self._rip_proc is not None:
-            match self._rip_proc.poll():
+        if self._ripper is not None:
+            match self._ripper.poll():
                 case None:
                     return Reconciled()
                 case 0:
@@ -63,7 +63,7 @@ class Ripper(Controller):
                     self._finalize_rip_failure()
 
         source_hash = isopod.linux.get_source_hash(device)
-        if source_hash == self._rip_source:
+        if self._last_disc is not None and self._last_disc.source_hash == source_hash:
             return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
@@ -81,22 +81,23 @@ class Ripper(Controller):
         )
 
         with db.Session() as session:
-            self._rip_disc = db.Disc(path=path, status=db.DiscStatus.RIPPABLE)
-            session.add(self._rip_disc)
+            self._last_disc = db.Disc(
+                path=path, status=db.DiscStatus.RIPPABLE, source_hash=source_hash
+            )
+            session.add(self._last_disc)
             session.commit()
 
         args = ["ddrescue", "--retry-passes=2", "--timeout=300", self.device_path, path]
-        self._rip_proc = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
-        self._rip_source = source_hash
+        self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._poll_after_rip, daemon=True).start()
         log.info("Running: %s", shlex.join(args))
         return Reconciled()
 
     def cleanup(self):
         self._udev_observer.stop()
-        if self._rip_proc is not None:
+        if self._ripper is not None:
             log.info("Waiting for in-flight rip to finish")
-            if (code := self._rip_proc.wait()) == 0:
+            if (code := self._ripper.wait()) == 0:
                 log.info("Rip succeeded")
                 self._finalize_rip_success()
             else:
@@ -104,23 +105,19 @@ class Ripper(Controller):
                 self._finalize_rip_failure()
 
     def _finalize_rip_success(self):
-        if (disc := self._rip_disc) is None:
+        if (disc := self._last_disc) is None:
             raise TypeError("missing disc")
-        if (rip_source := self._rip_source) is None:
-            raise TypeError("missing rip source")
 
         with db.Session() as session:
             disc.status = db.DiscStatus.SENDABLE
-            disc.source_hash = rip_source
             session.merge(disc)
             session.commit()
 
-        self._rip_proc = None
-        self._rip_disc = None
+        self._ripper = None
         self.on_rip_success()
 
     def _finalize_rip_failure(self):
-        if (disc := self._rip_disc) is None:
+        if (disc := self._last_disc) is None:
             raise TypeError("missing disc")
 
         with db.Session() as session:
@@ -128,8 +125,7 @@ class Ripper(Controller):
             session.delete(disc)
             session.commit()
 
-        self._rip_proc = None
-        self._rip_disc = None
+        self._ripper = None
 
     def _check_min_free_space(self) -> Optional[Result]:
         with open(self.device_path, "rb") as blk:
@@ -152,8 +148,8 @@ class Ripper(Controller):
         return None
 
     def _poll_after_rip(self):
-        if self._rip_proc is None:
+        if self._ripper is None:
             raise TypeError("missing rip process")
 
-        self._rip_proc.wait()
+        self._ripper.wait()
         self.poll()
