@@ -1,6 +1,5 @@
 import logging
 import shlex
-import time
 from subprocess import DEVNULL, Popen
 from threading import Thread
 from typing import Optional
@@ -9,7 +8,7 @@ from sqlalchemy import select
 
 import isopod
 from isopod import db
-from isopod.controller import Controller
+from isopod.controller import Controller, Reconciled, Result
 
 log = logging.getLogger(__name__)
 
@@ -22,19 +21,20 @@ class Sender(Controller):
         self._rsync: Optional[Popen] = None
         self._current_path: Optional[str] = None
 
-    def reconcile(self):
-        if not self._finalize_rsync():
-            return
+    def reconcile(self) -> Result:
+        if (result := self._reconcile_with_rsync()) is not None:
+            return result
 
         if (path := self._get_next_path()) is None:
             log.info("Waiting for next sendable disc")
-            return
+            return Reconciled()
 
         args = ["rsync", "--partial", path, f"{self.target_base}/{path}"]
         self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         self._current_path = path
         self._poll_on_finish(self._rsync)
         log.info("Started: %s", shlex.join(args))
+        return Reconciled()
 
     def cleanup(self):
         if self._rsync is not None:
@@ -42,12 +42,12 @@ class Sender(Controller):
             self._rsync.terminate()
             self._rsync.wait()
 
-    def _finalize_rsync(self) -> bool:
+    def _reconcile_with_rsync(self) -> Optional[Result]:
         if self._rsync is None:
-            return True
+            return None
 
         if (returncode := self._rsync.poll()) is None:
-            return False
+            return Reconciled()
 
         path = self._current_path
         self._rsync = None
@@ -61,7 +61,7 @@ class Sender(Controller):
             log.info("rsync failed with status %d", returncode)
             self.poll()
 
-        return True
+        return None
 
     def _finalize_rsync_success(self, path):
         with db.Session() as session:

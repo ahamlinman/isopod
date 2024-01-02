@@ -2,6 +2,14 @@ from abc import ABC, abstractmethod
 from threading import Event, Thread
 
 
+class Result(ABC):
+    pass
+
+
+class Reconciled(Result):
+    pass
+
+
 class Controller(ABC):
     def __init__(self):
         self._thread = Thread(target=self._run)
@@ -10,7 +18,7 @@ class Controller(ABC):
         self._thread.start()
 
     @abstractmethod
-    def reconcile(self):
+    def reconcile(self) -> Result:
         pass
 
     @abstractmethod
