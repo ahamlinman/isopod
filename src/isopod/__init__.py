@@ -53,7 +53,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     help="Only rip when this much space will be free after",
 )
 @click.option("--use-sender2", is_flag=True, help="Use the rewritten sender")
-def main(workdir, device, target, min_free_bytes, new_sender):
+def main(workdir, device, target, min_free_bytes, use_sender2):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -76,7 +76,7 @@ def main(workdir, device, target, min_free_bytes, new_sender):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    if new_sender:
+    if use_sender2:
         sender = isopod.sender2.Controller(target)
     else:
         sender = isopod.sender1.Controller(target)
