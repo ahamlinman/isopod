@@ -37,10 +37,11 @@ class Sender(Controller):
             return Reconciled()
 
         if disc.next_send_attempt is not None:
-            delay = disc.next_send_attempt - datetime.datetime.now()
-            if delay.total_seconds() > 0:
-                log.info("Waiting until %s to retry sending", disc.next_send_attempt)
-                return RepollAfter(seconds=delay.total_seconds())
+            delay = disc.next_send_attempt - datetime.datetime.utcnow()
+            delay_sec = delay.total_seconds()
+            if delay_sec > 0:
+                log.info("Will retry after %d second(s)", delay_sec)
+                return RepollAfter(seconds=delay_sec)
 
         args = ["rsync", "--partial", disc.path, f"{self.target_base}/{disc.path}"]
         self._rsync = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
@@ -81,17 +82,17 @@ class Sender(Controller):
             self._rsync = None
             self._current_disc = None
 
+            log.info("Failed to send %s", disc.path)
             disc.send_errors += 1
             retry_base_sec = 5
             retry_max_sec = 300
-            disc.next_send_attempt = datetime.datetime.now() + datetime.timedelta(
+            disc.next_send_attempt = datetime.datetime.utcnow() + datetime.timedelta(
                 seconds=min(
                     retry_max_sec, retry_base_sec * (2 ** (disc.send_errors - 1))
                 )
             )
             session.merge(disc)
             session.commit()
-            log.info("Marked disc for future retry")
 
     def _poll_on_finish(self, proc: Popen):
         def wait_and_poll():
@@ -105,6 +106,6 @@ class Sender(Controller):
             stmt = (
                 select(db.Disc)
                 .filter_by(status=db.DiscStatus.SENDABLE)
-                .order_by(db.Disc.send_errors, db.Disc.next_send_attempt)
+                .order_by(db.Disc.next_send_attempt.asc())
             )
             return session.execute(stmt).scalars().first()

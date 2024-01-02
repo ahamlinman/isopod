@@ -3,7 +3,7 @@ import logging
 from enum import Enum, auto
 from typing import Optional
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 log = logging.getLogger(__name__)
@@ -35,4 +35,6 @@ class Disc(Base):
     status: Mapped[DiscStatus] = mapped_column(default=DiscStatus.RIPPABLE)
     source_hash: Mapped[Optional[bytes]]
     send_errors: Mapped[int] = mapped_column(default=0)
-    next_send_attempt: Mapped[Optional[datetime.datetime]]
+    next_send_attempt: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.now()
+    )
