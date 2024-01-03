@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Event, Thread, Timer
-from typing import Callable
 
 
 class Result(ABC):

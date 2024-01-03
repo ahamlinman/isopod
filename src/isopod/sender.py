@@ -3,7 +3,6 @@ import logging
 import shlex
 from subprocess import DEVNULL, Popen
 from threading import Thread
-from typing import Optional
 
 from sqlalchemy import select
 
