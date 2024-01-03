@@ -1,8 +1,6 @@
-import os
-import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from threading import Event, Thread
+from threading import Event, Thread, Timer
 from typing import Callable
 
 
@@ -72,20 +70,5 @@ class Controller(ABC):
                 case Reconciled():
                     pass
                 case RepollAfter(seconds=seconds):
-                    self._repoller = _Repoller(seconds, self.poll)
+                    self._repoller = Timer(seconds, self.poll)
                     self._repoller.start()
-
-
-class _Repoller(Thread):
-    def __init__(self, seconds: float, callable: Callable):
-        super().__init__(daemon=True)
-        self.seconds = seconds
-        self.callable = callable
-        self._canceled = Event()
-
-    def run(self):
-        if not self._canceled.wait(timeout=self.seconds):
-            self.callable()
-
-    def cancel(self):
-        self._canceled.set()
