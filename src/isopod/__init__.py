@@ -10,7 +10,7 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
-import isopod.newripper
+import isopod.ripper
 import isopod.sender
 from isopod import db
 
@@ -75,7 +75,7 @@ def main(workdir, device, target, min_free_bytes):
     cleanup_stale_discs()
 
     sender = isopod.sender.Sender(target)
-    ripper = isopod.newripper.Ripper(device, min_free_bytes, sender.poll)
+    ripper = isopod.ripper.Ripper(device, min_free_bytes, sender.poll)
 
     # TODO: A status layer that can handle refreshing a small display.
 
