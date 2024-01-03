@@ -14,13 +14,19 @@ import isopod.ripper
 import isopod.sender
 from isopod import db
 
+
+def _die_on_thread_exception(args):
+    threading.__excepthook__(args)  # type: ignore
+    os._exit(100)
+
+
+threading.excepthook = _die_on_thread_exception
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
     datefmt="%F %T",
 )
-
-
 # Work around SQLAlchemy adding their own handler for echo=True, even though we
 # already have one at the root.
 logging.getLogger("sqlalchemy.engine.Engine").addHandler(logging.NullHandler())
