@@ -21,10 +21,11 @@ class RepollAfter(Result):
 
 class Controller(ABC):
     def __init__(self, daemon=False):
-        self._thread = Thread(target=self._run, daemon=daemon)
+        self.daemon = daemon
         self._trigger = Event()
         self._canceled = False
         self._repoller = None
+        self._thread = Thread(target=self._run, daemon=self.daemon)
         self._thread.start()
 
     @abstractmethod
@@ -50,8 +51,9 @@ class Controller(ABC):
         try:
             self._run_reconciler()
         except Exception as e:
-            traceback.print_exception(e)
-            os._exit(100)  # TODO: Think about other possibilities.
+            self._thread = Thread(target=self._run, daemon=self.daemon)
+            self._thread.start()
+            raise e
 
     def _run_reconciler(self):
         while self._trigger.wait():
