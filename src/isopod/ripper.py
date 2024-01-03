@@ -37,7 +37,7 @@ class Ripper(Controller):
             self._last_source_hash = session.execute(stmt).scalar_one_or_none()
 
         monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
-        self._udev_observer = MonitorObserver(monitor, self._update_device)
+        self._udev_observer = MonitorObserver(monitor, callback=self._update_device)
         self._device = isopod.linux.get_device(self.device_path)
         self._udev_observer.start()
         self._device = isopod.linux.get_device(self.device_path)
