@@ -56,11 +56,9 @@ class Ripper(Controller):
                 case None:
                     return Reconciled()
                 case 0:
-                    log.info("Rip succeeded")
                     self._finalize_rip_success()
                 case returncode:
-                    log.info("Rip failed with code %d", returncode)
-                    self._finalize_rip_failure()
+                    self._finalize_rip_failure(returncode)
 
         if source_hash == self._last_source_hash or not loaded:
             return Reconciled()
@@ -95,14 +93,31 @@ class Ripper(Controller):
 
     def cleanup(self):
         self._udev_observer.stop()
-        if self._ripper is not None:
-            log.info("Waiting for in-flight rip to finish")
-            if (code := self._ripper.wait()) == 0:
-                log.info("Rip succeeded")
-                self._finalize_rip_success()
-            else:
-                log.info("Rip failed with code %d", code)
-                self._finalize_rip_failure()
+        self._wait_for_last_rip()
+
+    def _wait_for_last_rip(self):
+        if self._ripper is None:
+            return
+
+        log.info("Waiting for in-flight rip to finish")
+        while self._try_wait(self._ripper) is None:
+            device = isopod.linux.get_device(self.device_path)
+            loaded = isopod.linux.is_cdrom_loaded(device)
+            source_hash = isopod.linux.get_source_hash(device)
+            if self._last_source_hash != source_hash or not loaded:
+                break
+
+        if (returncode := self._ripper.wait()) == 0:
+            self._finalize_rip_success()
+        else:
+            self._finalize_rip_failure(returncode)
+
+    @staticmethod
+    def _try_wait(proc: Popen, timeout: int = 5):
+        try:
+            return proc.wait(timeout=timeout)
+        except TimeoutError:
+            return None
 
     def _finalize_rip_success(self):
         with db.Session() as session:
@@ -113,10 +128,11 @@ class Ripper(Controller):
             disc.status = db.DiscStatus.SENDABLE
             session.commit()
 
+        log.info("Rip succeeded")
         self._ripper = None
         self.on_rip_success()
 
-    def _finalize_rip_failure(self):
+    def _finalize_rip_failure(self, returncode: int):
         with db.Session() as session:
             stmt = select(db.Disc).filter_by(
                 status=db.DiscStatus.RIPPABLE, source_hash=self._last_source_hash
@@ -126,6 +142,7 @@ class Ripper(Controller):
                 session.delete(disc)
                 session.commit()
 
+        log.info("Rip failed with status %d", returncode)
         self._ripper = None
 
     def _check_min_free_space(self) -> Optional[Result]:

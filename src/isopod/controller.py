@@ -11,9 +11,6 @@ class Result(ABC):
 
 
 class Reconciled(Result):
-    # TODO: Split this into incomplete and complete states, so we know whether
-    # we can cancel immediately or whether we should keep polling until we reach
-    # a stable state. (Or maybe I'll come up with another idea, who knows.)
     pass
 
 
