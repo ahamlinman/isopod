@@ -3,12 +3,12 @@ import logging
 import shlex
 import shutil
 import time
-from subprocess import DEVNULL, Popen
+from subprocess import DEVNULL, Popen, TimeoutExpired
 from threading import Thread
 from typing import Callable, Optional
 
 from pyudev import Monitor, MonitorObserver
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 import isopod.linux
 from isopod import db
@@ -100,11 +100,12 @@ class Ripper(Controller):
             return
 
         log.info("Waiting for in-flight rip to finish")
-        while self._try_wait(self._ripper) is None:
+        while self._try_wait(proc=self._ripper, timeout=1) is None:
             device = isopod.linux.get_device(self.device_path)
             loaded = isopod.linux.is_cdrom_loaded(device)
             source_hash = isopod.linux.get_source_hash(device)
             if self._last_source_hash != source_hash or not loaded:
+                self._ripper.terminate()
                 break
 
         if (returncode := self._ripper.wait()) == 0:
@@ -113,10 +114,10 @@ class Ripper(Controller):
             self._finalize_rip_failure(returncode)
 
     @staticmethod
-    def _try_wait(proc: Popen, timeout: int = 5):
+    def _try_wait(proc: Popen, timeout: int):
         try:
             return proc.wait(timeout=timeout)
-        except TimeoutError:
+        except TimeoutExpired:
             return None
 
     def _finalize_rip_success(self):
