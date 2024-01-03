@@ -91,6 +91,33 @@ class Ripper(Controller):
         log.info("Running: %s", shlex.join(args))
         return Reconciled()
 
+    def _check_min_free_space(self) -> Optional[Result]:
+        with open(self.device_path, "rb") as blk:
+            disc_size = blk.seek(0, io.SEEK_END)
+            need_free = disc_size + self.min_free_bytes
+
+        df = shutil.disk_usage(".")
+        if need_free > df.total:
+            log.error(
+                "Disc too large; need %d bytes free, have %d total in filesystem",
+                need_free,
+                df.total,
+            )
+            return Reconciled()
+
+        if df.free < need_free:
+            log.info("%d bytes free, waiting for at least %d", df.free, need_free)
+            return RepollAfter(seconds=30)
+
+        return None
+
+    def _poll_after_rip(self):
+        if self._ripper is None:
+            raise TypeError("missing rip process")
+
+        self._ripper.wait()
+        self.poll()
+
     def cleanup(self):
         self._udev_observer.stop()
         self._wait_for_last_rip()
@@ -100,15 +127,18 @@ class Ripper(Controller):
             return
 
         log.info("Waiting for in-flight rip to finish")
-        while self._try_wait(proc=self._ripper, timeout=1) is None:
+        disc_changed = False
+        while self._try_wait(proc=self._ripper, timeout=2) is None:
             device = isopod.linux.get_device(self.device_path)
             loaded = isopod.linux.is_cdrom_loaded(device)
             source_hash = isopod.linux.get_source_hash(device)
             if self._last_source_hash != source_hash or not loaded:
+                disc_changed = True
                 self._ripper.terminate()
                 break
 
-        if (returncode := self._ripper.wait()) == 0:
+        returncode = self._ripper.wait()
+        if returncode == 0 and not disc_changed:
             self._finalize_rip_success()
         else:
             self._finalize_rip_failure(returncode)
@@ -145,30 +175,3 @@ class Ripper(Controller):
 
         log.info("Rip failed with status %d", returncode)
         self._ripper = None
-
-    def _check_min_free_space(self) -> Optional[Result]:
-        with open(self.device_path, "rb") as blk:
-            disc_size = blk.seek(0, io.SEEK_END)
-            need_free = disc_size + self.min_free_bytes
-
-        df = shutil.disk_usage(".")
-        if need_free > df.total:
-            log.error(
-                "Disc too large; need %d bytes free, have %d total in filesystem",
-                need_free,
-                df.total,
-            )
-            return Reconciled()
-
-        if df.free < need_free:
-            log.info("%d bytes free, waiting for at least %d", df.free, need_free)
-            return RepollAfter(seconds=30)
-
-        return None
-
-    def _poll_after_rip(self):
-        if self._ripper is None:
-            raise TypeError("missing rip process")
-
-        self._ripper.wait()
-        self.poll()
