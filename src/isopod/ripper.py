@@ -7,7 +7,7 @@ from subprocess import DEVNULL, Popen, TimeoutExpired
 from threading import Thread
 from typing import Callable, Optional
 
-from pyudev import Monitor, MonitorObserver
+from pyudev import Device, Monitor, MonitorObserver
 from sqlalchemy import select
 
 import isopod.linux
@@ -36,17 +36,28 @@ class Ripper(Controller):
             )
             self._last_source_hash = session.execute(stmt).scalar_one_or_none()
 
-        self._udev_monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
-        self._udev_observer = MonitorObserver(
-            self._udev_monitor, lambda *_: self.poll()
-        )
+        monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
+        self._udev_observer = MonitorObserver(monitor, self._update_device)
+        self._device = isopod.linux.get_device(self.device_path)
         self._udev_observer.start()
+        self._device = isopod.linux.get_device(self.device_path)
+        self.poll()
+
+    def _update_device(self, dev: Device):
+        if dev != self._device:
+            return
+
+        if oldseq := isopod.linux.get_diskseq(self._device):
+            newseq = isopod.linux.get_diskseq(dev)
+            if newseq and int(oldseq) > int(newseq):
+                return
+
+        self._device = dev
         self.poll()
 
     def reconcile(self) -> Result:
-        device = isopod.linux.get_device(self.device_path)
-        source_hash = isopod.linux.get_source_hash(device)
-        loaded = isopod.linux.is_cdrom_loaded(device)
+        source_hash = isopod.linux.get_source_hash(self._device)
+        loaded = isopod.linux.is_cdrom_loaded(self._device)
 
         if self._ripper is not None:
             if source_hash != self._last_source_hash or not loaded:
@@ -67,13 +78,13 @@ class Ripper(Controller):
             return result
 
         path = str(time.time_ns())
-        if label := isopod.linux.get_fs_label(device):
+        if label := isopod.linux.get_fs_label(self._device):
             path += f"_{label}"
         path += ".iso"
         log.info(
             "Ready to rip %s (diskseq=%s) to %s",
-            self.device_path,
-            isopod.linux.get_diskseq(device),
+            self._device.device_node,
+            isopod.linux.get_diskseq(self._device),
             path,
         )
 
@@ -85,14 +96,20 @@ class Ripper(Controller):
             session.commit()
 
         self._last_source_hash = source_hash
-        args = ["ddrescue", "--retry-passes=2", "--timeout=300", self.device_path, path]
+        args = [
+            "ddrescue",
+            "--retry-passes=2",
+            "--timeout=300",
+            self._device.device_node,
+            path,
+        ]
         self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._poll_after_rip, daemon=True).start()
         log.info("Running: %s", shlex.join(args))
         return Reconciled()
 
     def _check_min_free_space(self) -> Optional[Result]:
-        with open(self.device_path, "rb") as blk:
+        with open(self._device.device_node, "rb") as blk:  # type: ignore
             disc_size = blk.seek(0, io.SEEK_END)
             need_free = disc_size + self.min_free_bytes
 
