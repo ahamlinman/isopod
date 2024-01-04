@@ -31,6 +31,6 @@ image_dir = os.path.dirname(__file__)
 
 def display_named_image(name: str):
     image_path = os.path.join(image_dir, f"{name}.png")
-    image = Image.open(image_path).convert("1")
+    image = Image.open(image_path).convert("1").convert("L")
     display.image(image)
     display.display()
