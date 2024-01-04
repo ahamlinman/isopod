@@ -124,3 +124,16 @@ def target_run(image, address, port):
     log.info(args)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     sys.exit(subprocess.run(args).returncode)
+
+
+@cli.command()
+@click.argument("name")
+def epd(name):
+    """Show the named image on the Adafruit E-Ink Bonnet."""
+    try:
+        import isopod.epd
+    except ImportError as e:
+        log.exception("E-Ink display unavailable", exc_info=e)
+        sys.exit(1)
+
+    isopod.epd.display_named_image(name)
