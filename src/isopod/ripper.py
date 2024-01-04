@@ -74,6 +74,14 @@ class Ripper(Controller):
         if source_hash == self._last_source_hash or not loaded:
             return Reconciled()
 
+        with open(self._device.device_node, "rb") as disc:  # type: ignore
+            try:
+                disc.seek(16 * 2048)
+                disc.read(2048)
+            except:
+                log.warn("Quick read check failed, refusing to rip disc")
+                return Reconciled()
+
         if (result := self._check_min_free_space()) is not None:
             return result
 
