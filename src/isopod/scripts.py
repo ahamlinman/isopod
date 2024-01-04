@@ -1,4 +1,5 @@
 import logging
+import os
 import shlex
 import signal
 import subprocess
@@ -126,14 +127,40 @@ def target_run(image, address, port):
     sys.exit(subprocess.run(args).returncode)
 
 
-@cli.command()
+@cli.group()
+def epd():
+    """Work with the Adafruit E-Ink Bonnet."""
+    pass
+
+
+@epd.command(name="list")
+def epd_list():
+    """List the available named images."""
+
+    epd = _try_import_epd()
+    names = sorted(
+        filename.removesuffix(".png")
+        for filename in os.listdir(epd.image_dir)
+        if filename.endswith(".png")
+    )
+    for name in names:
+        print(name)
+
+
+@epd.command(name="show")
 @click.argument("name")
-def epd(name):
-    """Show the named image on the Adafruit E-Ink Bonnet."""
+def epd_show(name):
+    """Show the named image on the display."""
+
+    epd = _try_import_epd()
+    epd.display_named_image(name)
+
+
+def _try_import_epd():
     try:
         import isopod.epd
     except ImportError as e:
         log.exception("E-Ink display unavailable", exc_info=e)
         sys.exit(1)
 
-    isopod.epd.display_named_image(name)
+    return isopod.epd

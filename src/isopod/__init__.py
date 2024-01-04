@@ -23,7 +23,7 @@ def _die_on_thread_exception(args):
 threading.excepthook = _die_on_thread_exception
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
     datefmt="%F %T",
 )
