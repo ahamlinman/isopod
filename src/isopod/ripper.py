@@ -98,8 +98,9 @@ class Ripper(Controller):
         self._last_source_hash = source_hash
         args = [
             "ddrescue",
-            "--retry-passes=2",
-            "--timeout=300",
+            "--idirect",
+            "--sector-size=2048",
+            f"--log-events={path}.log",
             self._device.device_node,
             path,
         ]
