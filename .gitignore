@@ -5,3 +5,5 @@ __pycache__
 /build
 /dist
 /*.sqlite3
+/*.iso
+/*.iso.log
