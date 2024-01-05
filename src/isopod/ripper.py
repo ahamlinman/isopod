@@ -97,7 +97,7 @@ class Ripper(Controller):
             return Reconciled()
 
         if not loaded:
-            if self.status == Status.INITIALIZING:
+            if self.status not in (Status.LAST_SUCCEEDED, Status.LAST_FAILED):
                 self.status = Status.INITIALIZED
             return Reconciled()
 
