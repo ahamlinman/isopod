@@ -52,7 +52,7 @@ class Display(Controller):
         super().__init__(daemon=True)
         self._bucket = Bucket(capacity=2, fill_delay=180, burst_delay=30)
         self._ripper = ripper
-        self._last_status = self._ripper.status
+        self._last_status = None
         self.poll()
 
     def reconcile(self):
@@ -74,7 +74,10 @@ class Display(Controller):
             Status.LAST_SUCCEEDED: "success",
             Status.LAST_FAILED: "failure",
         }
-        display_named_image(images_by_status[status])
+        name = images_by_status[status]
+        display_named_image(name)
+        log.info("Displayed %s image", name)
+        self._last_status = status
         return Reconciled()
 
     def cleanup(self):
