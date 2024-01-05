@@ -50,7 +50,7 @@ def _load_named_image(name: str):
 class Display(Controller):
     def __init__(self, ripper: Ripper):
         super().__init__(daemon=True)
-        self._bucket = Bucket(capacity=2, fill_delay=180, burst_delay=30)
+        self._bucket = Bucket(capacity=3, fill_delay=180, burst_delay=30)
         self._ripper = ripper
         self._last_status = None
         self.poll()
