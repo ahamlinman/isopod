@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import shlex
 import signal
 import subprocess
@@ -173,8 +174,8 @@ def epd_bucket(capacity, fill_delay, burst_delay):
             bucket.take()
             log.info("Taken!")
         except TakeBlocked as e:
-            log.info("Waiting %0.2f seconds", e.seconds_remaining)
-            time.sleep(e.seconds_remaining)
+            log.info("%0.2f seconds remaining", e.seconds_remaining)
+            time.sleep(random.random())
 
 
 def _try_import_epd():
