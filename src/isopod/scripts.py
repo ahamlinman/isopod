@@ -4,6 +4,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import time
 from binascii import hexlify
 from subprocess import DEVNULL
 
@@ -154,6 +155,26 @@ def epd_show(name):
 
     epd = _try_import_epd()
     epd.display_named_image(name)
+
+
+@epd.command(name="bucket")
+@click.option("--capacity", type=int, help="The capacity of the bucket")
+@click.option("--fill-delay", type=float, help="Seconds to wait before adding a token")
+@click.option(
+    "--burst-delay", type=float, help="Minimum delay in seconds after taking a token"
+)
+def epd_bucket(capacity, fill_delay, burst_delay):
+    _try_import_epd()
+    from isopod.epd.limit import Bucket, TakeBlocked
+
+    bucket = Bucket(capacity=capacity, fill_delay=fill_delay, burst_delay=burst_delay)
+    while True:
+        try:
+            bucket.take()
+            log.info("Taken!")
+        except TakeBlocked as e:
+            log.info("Waiting %0.2f seconds", e.seconds_remaining)
+            time.sleep(e.seconds_remaining)
 
 
 def _try_import_epd():
