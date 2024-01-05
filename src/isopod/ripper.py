@@ -3,6 +3,7 @@ import logging
 import shlex
 import shutil
 import time
+from enum import Enum, auto
 from subprocess import DEVNULL, Popen, TimeoutExpired
 from threading import Thread
 from typing import Callable, Optional
@@ -17,13 +18,31 @@ from isopod.controller import Controller, Reconciled, RepollAfter, Result
 log = logging.getLogger(__name__)
 
 
+class Status(Enum):
+    INITIALIZING = auto()
+    INITIALIZED = auto()
+    RIPPING = auto()
+    DISC_INVALID = auto()
+    LAST_SUCCEEDED = auto()
+    LAST_FAILED = auto()
+
+
 class Ripper(Controller):
-    def __init__(self, device_path: str, min_free_bytes: int, on_rip_success: Callable):
+    def __init__(
+        self,
+        /,
+        device_path: str,
+        min_free_bytes: int,
+        on_status_change: Callable,
+        on_rip_success: Callable,
+    ):
         super().__init__()
         self.device_path = device_path
         self.min_free_bytes = min_free_bytes
+        self.on_status_change = on_status_change
         self.on_rip_success = on_rip_success
 
+        self._status = Status.INITIALIZING
         self._ripper = None
         with db.Session() as session:
             stmt = (
@@ -71,7 +90,14 @@ class Ripper(Controller):
                 case returncode:
                     self._finalize_rip_failure(returncode)
 
-        if source_hash == self._last_source_hash or not loaded:
+        if source_hash == self._last_source_hash:
+            if self.status == Status.INITIALIZING:
+                self.status = Status.LAST_SUCCEEDED
+            return Reconciled()
+
+        if not loaded:
+            if self.status == Status.INITIALIZING:
+                self.status = Status.INITIALIZED
             return Reconciled()
 
         with open(self._device.device_node, "rb") as disc:  # type: ignore
@@ -80,6 +106,7 @@ class Ripper(Controller):
                 disc.read(2048)
             except:
                 log.warn("Quick read check failed, refusing to rip disc")
+                self.status = Status.DISC_INVALID
                 return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
@@ -115,6 +142,7 @@ class Ripper(Controller):
         self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._poll_after_rip, daemon=True).start()
         log.info("Running: %s", shlex.join(args))
+        self.status = Status.RIPPING
         return Reconciled()
 
     def _check_min_free_space(self) -> Optional[Result]:
@@ -187,6 +215,7 @@ class Ripper(Controller):
 
         log.info("Rip succeeded")
         self._ripper = None
+        self.status = Status.LAST_SUCCEEDED
         self.on_rip_success()
 
     def _finalize_rip_failure(self, returncode: int):
@@ -201,3 +230,14 @@ class Ripper(Controller):
 
         log.info("Rip failed with status %d", returncode)
         self._ripper = None
+        self.status = Status.LAST_FAILED
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value: Status):
+        if self._status != value:
+            self._status = value
+            self.on_status_change()
