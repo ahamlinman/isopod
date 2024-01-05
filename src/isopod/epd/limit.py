@@ -42,9 +42,8 @@ class Bucket:
         delays = []
 
         assert available >= 0
-        if int(available) == 0:
-            token_deficit = 1 - available
-            fill_time = self._take_time + (self.fill_delay * token_deficit)
+        if available < 1:
+            fill_time = self._take_time + self.fill_delay
             seconds_remaining = max(0, fill_time - now)
             delays.append(seconds_remaining)
 
