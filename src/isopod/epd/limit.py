@@ -39,16 +39,22 @@ class Bucket:
         seconds_since_take = now - self._take_time
         tokens_since_take = seconds_since_take / self.fill_delay
         available = min(self._take_remaining + tokens_since_take, self.capacity)
+        delays = []
+
         assert available >= 0
         if int(available) == 0:
-            fill_time = self._take_time + self.fill_delay
-            seconds_remaining = max(0, fill_time - time.monotonic())
-            raise TakeBlocked(seconds_remaining=seconds_remaining)
+            token_deficit = 1 - available
+            fill_time = self._take_time + (self.fill_delay * token_deficit)
+            seconds_remaining = max(0, fill_time - now)
+            delays.append(seconds_remaining)
 
         if seconds_since_take < self.burst_delay:
             ready_time = self._take_time + self.burst_delay
-            seconds_remaining = max(0, ready_time - time.monotonic())
-            raise TakeBlocked(seconds_remaining=seconds_remaining)
+            seconds_remaining = max(0, ready_time - now)
+            delays.append(seconds_remaining)
 
-        self._take_time = time.monotonic()
+        if delays:
+            raise TakeBlocked(seconds_remaining=max(delays))
+
+        self._take_time = now
         self._take_remaining = available - 1
