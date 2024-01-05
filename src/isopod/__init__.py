@@ -80,15 +80,27 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
+    display = None
+
+    def poll_display():
+        if display is not None:
+            display.poll()
+
     sender = isopod.sender.Sender(target)
     ripper = isopod.ripper.Ripper(
         device_path=device,
         min_free_bytes=min_free_bytes,
-        on_status_change=lambda: log.info("Ripper status: %s", ripper.status),
+        on_status_change=poll_display,
         on_rip_success=sender.poll,
     )
 
-    # TODO: A status layer that can handle refreshing a small display.
+    try:
+        from isopod.epd import Display
+
+        display = Display(ripper)
+        log.info("Initialized E-Ink display")
+    except ImportError:
+        log.info("Starting without E-Ink display")
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Received stop signal, shutting down")
