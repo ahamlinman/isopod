@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 class Status(Enum):
     INITIALIZING = auto()
     INITIALIZED = auto()
+    WAITING_FOR_SPACE = auto()
     RIPPING = auto()
     DISC_INVALID = auto()
     LAST_SUCCEEDED = auto()
@@ -110,6 +111,7 @@ class Ripper(Controller):
                 return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
+            self.status = Status.WAITING_FOR_SPACE
             return result
 
         path = str(time.time_ns())

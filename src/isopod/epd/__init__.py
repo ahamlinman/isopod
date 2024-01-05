@@ -69,6 +69,7 @@ class Display(Controller):
 
         images_by_status = {
             Status.INITIALIZED: "insert",
+            Status.WAITING_FOR_SPACE: "wait",
             Status.RIPPING: "copying",
             Status.DISC_INVALID: "unreadable",
             Status.LAST_SUCCEEDED: "success",
