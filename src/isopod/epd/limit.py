@@ -17,9 +17,8 @@ class Bucket:
     """
     A specialized token bucket for use with the E-Ink display that Isopod
     supports, which is not designed to refresh more than once every few minutes.
-    The bucket adds tokens based on the time at which the last token was taken,
-    rather than at a constant rate. It also enforces a minimum delay after
-    taking a token regardless of how many are left in the bucket.
+    In addition to the normal behavior of a token bucket, this bucket enforces a
+    minimum delay between taking tokens regardless of how many are available.
     """
 
     capacity: int
@@ -27,7 +26,7 @@ class Bucket:
     burst_delay: float
 
     _take_time: float = field(default=0, init=False)
-    _take_remaining: int = field(default=0, init=False)
+    _take_remaining: float = field(default=0, init=False)
 
     def __post_init__(self):
         if self.capacity < 1:
@@ -38,10 +37,10 @@ class Bucket:
     def take(self):
         now = time.monotonic()
         seconds_since_take = now - self._take_time
-        tokens_since_take = int(seconds_since_take / self.fill_delay)
+        tokens_since_take = seconds_since_take / self.fill_delay
         available = min(self._take_remaining + tokens_since_take, self.capacity)
         assert available >= 0
-        if available == 0:
+        if int(available) == 0:
             fill_time = self._take_time + self.fill_delay
             seconds_remaining = max(0, fill_time - time.monotonic())
             raise TakeBlocked(seconds_remaining=seconds_remaining)
