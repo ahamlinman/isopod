@@ -97,7 +97,13 @@ class Ripper(Controller):
             return Reconciled()
 
         if not loaded:
-            if self.status not in (Status.LAST_SUCCEEDED, Status.LAST_FAILED):
+            # TODO: This seems more like a concern for the display than for this
+            # status.
+            if self.status in (
+                Status.INITIALIZING,
+                Status.WAITING_FOR_SPACE,
+                Status.RIPPING,
+            ):
                 self.status = Status.INITIALIZED
             return Reconciled()
 
