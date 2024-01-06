@@ -6,7 +6,7 @@ from threading import Thread
 
 from sqlalchemy import select
 
-import isopod
+import isopod.daemon
 from isopod import db
 from isopod.controller import Controller, Reconciled, RepollAfter, Result
 
@@ -69,7 +69,7 @@ class Sender(Controller):
             session.commit()
             log.info("Finished sending %s", disc.path)
 
-            isopod.force_unlink(disc.path)
+            isopod.daemon.force_unlink(disc.path)
             session.delete(disc)
             session.commit()
             log.info("Cleaned up %s", disc.path)

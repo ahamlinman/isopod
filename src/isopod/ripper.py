@@ -11,6 +11,7 @@ from typing import Callable, Optional
 from pyudev import Device, Monitor, MonitorObserver
 from sqlalchemy import select
 
+import isopod.daemon
 import isopod.linux
 from isopod import db
 from isopod.controller import Controller, Reconciled, RepollAfter, Result
@@ -223,7 +224,7 @@ class Ripper(Controller):
                 status=db.DiscStatus.RIPPABLE, source_hash=self._last_source_hash
             )
             if disc := session.execute(stmt).scalar_one_or_none():
-                isopod.force_unlink(disc.path)
+                isopod.daemon.force_unlink(disc.path)
                 session.delete(disc)
                 session.commit()
 
