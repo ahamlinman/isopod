@@ -45,13 +45,11 @@ class Bucket:
         if available < 1:
             tokens_missing = 1 - available
             fill_time = now + (self.fill_delay * tokens_missing)
-            seconds_remaining = max(0, fill_time - now)
-            delays.append(seconds_remaining)
+            delays.append(fill_time - now)
 
         if seconds_since_take < self.burst_delay:
             ready_time = self._take_time + self.burst_delay
-            seconds_remaining = max(0, ready_time - now)
-            delays.append(seconds_remaining)
+            delays.append(ready_time - now)
 
         if delays:
             raise TakeBlocked(seconds_remaining=max(delays))
