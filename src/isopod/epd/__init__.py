@@ -57,7 +57,15 @@ class Display(Controller):
 
     def reconcile(self):
         status = self._ripper.status
-        if status == Status.INITIALIZING or status == self._last_status:
+        if status in (Status.UNKNOWN, self._last_status):
+            return Reconciled()
+
+        if status == Status.DRIVE_EMPTY and self._last_status in (
+            Status.DISC_INVALID,
+            Status.LAST_SUCCEEDED,
+            Status.LAST_FAILED,
+        ):
+            # Emptying the drive isn't important enough to update the display.
             return Reconciled()
 
         try:
@@ -68,7 +76,7 @@ class Display(Controller):
             return RepollAfter(seconds=delay)
 
         images_by_status = {
-            Status.INITIALIZED: "insert",
+            Status.DRIVE_EMPTY: "insert",
             Status.WAITING_FOR_SPACE: "wait",
             Status.RIPPING: "copying",
             Status.DISC_INVALID: "unreadable",

@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 
 class Status(Enum):
-    INITIALIZING = auto()
-    INITIALIZED = auto()
+    UNKNOWN = auto()
+    DRIVE_EMPTY = auto()
     WAITING_FOR_SPACE = auto()
     RIPPING = auto()
     DISC_INVALID = auto()
@@ -43,7 +43,7 @@ class Ripper(Controller):
         self.on_status_change = on_status_change
         self.on_rip_success = on_rip_success
 
-        self._status = Status.INITIALIZING
+        self._status = Status.UNKNOWN
         self._ripper = None
         with db.Session() as session:
             stmt = (
@@ -92,19 +92,12 @@ class Ripper(Controller):
                     self._finalize_rip_failure(returncode)
 
         if source_hash == self._last_source_hash:
-            if self.status == Status.INITIALIZING:
+            if self.status == Status.UNKNOWN:
                 self.status = Status.LAST_SUCCEEDED
             return Reconciled()
 
         if not loaded:
-            # TODO: This seems more like a concern for the display than for this
-            # status.
-            if self.status in (
-                Status.INITIALIZING,
-                Status.WAITING_FOR_SPACE,
-                Status.RIPPING,
-            ):
-                self.status = Status.INITIALIZED
+            self.status = Status.DRIVE_EMPTY
             return Reconciled()
 
         with open(self._device.device_node, "rb") as disc:  # type: ignore
