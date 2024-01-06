@@ -10,6 +10,7 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
+import isopod.reporter
 import isopod.ripper
 import isopod.sender
 from isopod import db
@@ -82,6 +83,8 @@ def main(workdir, device, target, min_free_bytes):
 
     reporter = None
 
+    # TODO: Circular dependencies are bad and I'm a bad person for doing this
+    # hack instead of fixing my broken architecture.
     def poll_display():
         if reporter is not None:
             reporter.poll()
@@ -93,19 +96,20 @@ def main(workdir, device, target, min_free_bytes):
         on_status_change=poll_display,
         on_rip_success=sender.poll,
     )
-
-    try:
-        from isopod.epd.reporter import Reporter
-
-        reporter = Reporter(ripper)
-        log.info("Initialized E-Ink display")
-    except ImportError:
-        log.info("Starting without E-Ink display")
+    reporter = isopod.reporter.Reporter(ripper)
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
-    log.info("Received stop signal, shutting down")
-    sender.cancel()
+    log.info("Received stop signal")
+
+    log.info("Shutting down ripper")
     ripper.cancel()
+    ripper.join()
+
+    log.info("Shutting down reporter and sender")
+    reporter.cancel()
+    sender.cancel()
+    reporter.join()
+    sender.join()
 
 
 def force_unlink(path):
