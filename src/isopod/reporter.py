@@ -22,8 +22,6 @@ class NullReporter:
 try:
     from isopod.epd.reporter import Reporter as EPDReporter
 
-    log.info("Reporting status to E-Ink display")
     Reporter = EPDReporter
 except ImportError:
-    log.info("E-Ink display not available; using the stub reporter")
     Reporter = NullReporter

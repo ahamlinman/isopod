@@ -96,7 +96,12 @@ def main(workdir, device, target, min_free_bytes):
         on_status_change=poll_display,
         on_rip_success=sender.poll,
     )
+
     reporter = isopod.reporter.Reporter(ripper)
+    if isinstance(reporter, isopod.reporter.NullReporter):
+        isopod.reporter.log.info("No E-Ink display support, skipping status updates")
+    else:
+        isopod.reporter.log.info("Reporting status to E-Ink display")
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Received stop signal")
