@@ -1,3 +1,7 @@
+import isopod.logging
+
+isopod.logging.configure()
+
 import logging
 import os
 import random
