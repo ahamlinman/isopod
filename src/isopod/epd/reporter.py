@@ -1,16 +1,26 @@
 import logging
 
-from isopod.controller import Controller, Reconciled, RepollAfter
-from isopod.epd.display import display_named_image
+from isopod.controller import Controller, Reconciled, RepollAfter, Result
+from isopod.epd.display import DISPLAY
+from isopod.epd.images import load_named_image
 from isopod.epd.limit import Bucket, TakeBlocked
 from isopod.ripper import Ripper, Status
 
 log = logging.getLogger(__name__)
 
+IMAGE_NAMES_BY_STATUS = {
+    Status.DRIVE_EMPTY: "insert",
+    Status.WAITING_FOR_SPACE: "wait",
+    Status.RIPPING: "copying",
+    Status.DISC_INVALID: "unreadable",
+    Status.LAST_SUCCEEDED: "success",
+    Status.LAST_FAILED: "failure",
+}
+
 
 class Reporter(Controller):
     def __init__(self, ripper: Ripper):
-        super().__init__(daemon=True)
+        super().__init__()
         self._bucket = Bucket(capacity=3, fill_delay=180, burst_delay=30)
         self._ripper = ripper
         self._last_status = None
@@ -29,26 +39,24 @@ class Reporter(Controller):
             # Emptying the drive isn't important enough to update the display.
             return Reconciled()
 
+        result = self._try_display_status_image(status)
+        if isinstance(result, Reconciled):
+            self._last_status = status
+        return result
+
+    def cleanup(self):
+        self._try_display_status_image(self._ripper.status)
+
+    def _try_display_status_image(self, status: Status) -> Result:
         try:
             self._bucket.take()
         except TakeBlocked as e:
             delay = e.seconds_remaining
-            log.info("Waiting %0.2f seconds to refresh display", delay)
+            log.info("Can refresh display in %0.2f seconds", delay)
             return RepollAfter(seconds=delay)
 
-        images_by_status = {
-            Status.DRIVE_EMPTY: "insert",
-            Status.WAITING_FOR_SPACE: "wait",
-            Status.RIPPING: "copying",
-            Status.DISC_INVALID: "unreadable",
-            Status.LAST_SUCCEEDED: "success",
-            Status.LAST_FAILED: "failure",
-        }
-        name = images_by_status[status]
-        display_named_image(name)
+        name = IMAGE_NAMES_BY_STATUS[status]
+        DISPLAY.image(load_named_image(name))
+        DISPLAY.display()
         log.info("Displayed %s image", name)
-        self._last_status = status
         return Reconciled()
-
-    def cleanup(self):
-        pass

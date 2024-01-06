@@ -156,12 +156,14 @@ def epd_show(name):
     """Show the named image on the display."""
 
     try:
-        from isopod.epd.display import display_named_image
+        from isopod.epd.display import DISPLAY
+        from isopod.epd.images import load_named_image
     except ImportError as e:
         log.exception("E-Ink display unavailable", exc_info=e)
         sys.exit(1)
 
-    display_named_image(name)
+    DISPLAY.image(load_named_image(name))
+    DISPLAY.display()
 
 
 @epd.command(name="bucket")
