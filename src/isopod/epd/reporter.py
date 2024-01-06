@@ -23,15 +23,16 @@ class Reporter(Controller):
         super().__init__()
         self._bucket = Bucket(capacity=3, fill_delay=180, burst_delay=30)
         self._ripper = ripper
-        self._last_status = None
+        self._desired_status = self._ripper.status
+        self._displayed_status = None
         self.poll()
 
     def reconcile(self):
-        status = self._ripper.status
-        if status in (Status.UNKNOWN, self._last_status):
+        current_status = self._ripper.status
+        if current_status == Status.UNKNOWN:
             return Reconciled()
 
-        if status == Status.DRIVE_EMPTY and self._last_status in (
+        if current_status == Status.DRIVE_EMPTY and self._desired_status in (
             Status.DISC_INVALID,
             Status.LAST_SUCCEEDED,
             Status.LAST_FAILED,
@@ -39,9 +40,13 @@ class Reporter(Controller):
             # Emptying the drive isn't important enough to update the display.
             return Reconciled()
 
-        result = self._try_display_status_image(status)
+        self._desired_status = current_status
+        if self._displayed_status == self._desired_status:
+            return Reconciled()
+
+        result = self._try_display_status_image(self._desired_status)
         if isinstance(result, Reconciled):
-            self._last_status = status
+            self._displayed_status = self._desired_status
         return result
 
     def cleanup(self):
