@@ -37,23 +37,13 @@ class Reporter(Controller):
             Status.LAST_SUCCEEDED,
             Status.LAST_FAILED,
         ):
-            # Emptying the drive isn't important enough to update the display.
-            pass
+            pass  # Emptying the drive isn't important enough to update the display.
         else:
             self._desired_status = current_status
 
         if self._displayed_status == self._desired_status:
             return Reconciled()
 
-        result = self._try_display_status_image(self._desired_status)
-        if isinstance(result, Reconciled):
-            self._displayed_status = self._desired_status
-        return result
-
-    def cleanup(self):
-        self._try_display_status_image(self._ripper.status)
-
-    def _try_display_status_image(self, status: Status) -> Result:
         try:
             self._bucket.take()
         except TakeBlocked as e:
@@ -61,8 +51,12 @@ class Reporter(Controller):
             log.info("Can refresh display in %0.2f seconds", delay)
             return RepollAfter(seconds=delay)
 
-        name = IMAGE_NAMES_BY_STATUS[status]
+        name = IMAGE_NAMES_BY_STATUS[self._desired_status]
         DISPLAY.image(load_named_image(name))
         DISPLAY.display()
         log.info("Displayed %s image", name)
+        self._displayed_status = self._desired_status
         return Reconciled()
+
+    def cleanup(self):
+        self.reconcile()
