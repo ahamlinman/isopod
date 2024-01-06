@@ -43,7 +43,8 @@ class Bucket:
 
         assert available >= 0
         if available < 1:
-            fill_time = self._take_time + self.fill_delay
+            tokens_missing = 1 - available
+            fill_time = now + (self.fill_delay * tokens_missing)
             seconds_remaining = max(0, fill_time - now)
             delays.append(seconds_remaining)
 
