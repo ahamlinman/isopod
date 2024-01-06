@@ -31,6 +31,8 @@ class Bucket:
     def __post_init__(self):
         if self.capacity < 1:
             raise ValueError("capacity must be at least 1")
+        if self.fill_delay <= 0:
+            raise ValueError("fill_delay must be greater than 0")
 
         self._take_remaining = self.capacity
 
