@@ -38,9 +38,10 @@ class Reporter(Controller):
             Status.LAST_FAILED,
         ):
             # Emptying the drive isn't important enough to update the display.
-            return Reconciled()
+            pass
+        else:
+            self._desired_status = current_status
 
-        self._desired_status = current_status
         if self._displayed_status == self._desired_status:
             return Reconciled()
 
