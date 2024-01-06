@@ -14,6 +14,7 @@ import click
 from sqlalchemy import create_engine, select
 
 import isopod.linux
+import isopod.os
 import isopod.reporter
 import isopod.ripper
 import isopod.sender
@@ -101,20 +102,13 @@ def main(workdir, device, target, min_free_bytes):
     sender.join()
 
 
-def force_unlink(path):
-    try:
-        os.unlink(path)
-    except FileNotFoundError:
-        pass
-
-
 def cleanup_stale_discs():
     with db.Session() as session:
         stmt = select(db.Disc).where(
             db.Disc.status.in_((db.DiscStatus.RIPPABLE, db.DiscStatus.COMPLETE))
         )
         for disc in session.execute(stmt).scalars():
-            force_unlink(disc.path)
+            isopod.os.force_unlink(disc.path)
             session.delete(disc)
             session.commit()
             log.info("Cleaned up stale disc %s", disc.path)
