@@ -81,27 +81,16 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    reporter = None
-
-    # TODO: Circular dependencies are bad and I'm a bad person for doing this
-    # hack instead of fixing my broken architecture.
-    def poll_display():
-        if reporter is not None:
-            reporter.poll()
-
+    ripper = isopod.ripper.Ripper(device_path=device, min_free_bytes=min_free_bytes)
     sender = isopod.sender.Sender(target)
-    ripper = isopod.ripper.Ripper(
-        device_path=device,
-        min_free_bytes=min_free_bytes,
-        on_status_change=poll_display,
-        on_rip_success=sender.poll,
-    )
-
     reporter = isopod.reporter.Reporter(ripper)
     if isinstance(reporter, isopod.reporter.NullReporter):
         isopod.reporter.log.info("No E-Ink display support, skipping status updates")
     else:
         isopod.reporter.log.info("Reporting status to E-Ink display")
+
+    ripper.notify(sender.poll)
+    ripper.notify(reporter.poll)
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Received stop signal")

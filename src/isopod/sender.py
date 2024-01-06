@@ -34,7 +34,6 @@ class Sender(Controller):
                     self._finalize_rsync_failure()
 
         if (disc := self._get_next_disc()) is None:
-            log.info("Waiting for next sendable disc")
             return Reconciled()
 
         if disc.next_send_attempt is not None:

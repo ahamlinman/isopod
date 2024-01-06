@@ -34,16 +34,14 @@ class Ripper(Controller):
         /,
         device_path: str,
         min_free_bytes: int,
-        on_status_change: Callable,
-        on_rip_success: Callable,
     ):
         super().__init__()
         self.device_path = device_path
         self.min_free_bytes = min_free_bytes
-        self.on_status_change = on_status_change
-        self.on_rip_success = on_rip_success
 
         self._status = Status.UNKNOWN
+        self._watchers: set[Callable] = set()
+
         self._ripper = None
         with db.Session() as session:
             stmt = (
@@ -102,6 +100,7 @@ class Ripper(Controller):
 
         with open(self._device.device_node, "rb") as disc:  # type: ignore
             try:
+                # https://wiki.osdev.org/ISO_9660#Volume_Descriptors
                 disc.seek(16 * 2048)
                 disc.read(2048)
             except:
@@ -217,7 +216,6 @@ class Ripper(Controller):
         log.info("Rip succeeded")
         self._ripper = None
         self.status = Status.LAST_SUCCEEDED
-        self.on_rip_success()
 
     def _finalize_rip_failure(self, returncode: int):
         with db.Session() as session:
@@ -241,4 +239,9 @@ class Ripper(Controller):
     def status(self, value: Status):
         if self._status != value:
             self._status = value
-            self.on_status_change()
+            for watcher in self._watchers:
+                watcher()
+
+    def notify(self, watcher: Callable):
+        self._watchers |= {watcher}
+        watcher()
