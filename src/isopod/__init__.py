@@ -80,11 +80,11 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    display = None
+    reporter = None
 
     def poll_display():
-        if display is not None:
-            display.poll()
+        if reporter is not None:
+            reporter.poll()
 
     sender = isopod.sender.Sender(target)
     ripper = isopod.ripper.Ripper(
@@ -95,9 +95,9 @@ def main(workdir, device, target, min_free_bytes):
     )
 
     try:
-        from isopod.epd import Display
+        from isopod.epd.reporter import Reporter
 
-        display = Display(ripper)
+        reporter = Reporter(ripper)
         log.info("Initialized E-Ink display")
     except ImportError:
         log.info("Starting without E-Ink display")

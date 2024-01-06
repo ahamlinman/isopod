@@ -12,7 +12,9 @@ from subprocess import DEVNULL
 import click
 from pyudev import Context, Device, Monitor
 
+import isopod.epd.images
 import isopod.linux
+from isopod.epd.limit import Bucket, TakeBlocked
 
 log = logging.getLogger(__name__)
 context_settings = {"help_option_names": ["-h", "--help"]}
@@ -139,10 +141,9 @@ def epd():
 def epd_list():
     """List the available named images."""
 
-    epd = _try_import_epd()
     names = sorted(
         filename.removesuffix(".png")
-        for filename in os.listdir(epd.image_dir)
+        for filename in os.listdir(isopod.epd.images.IMAGE_DIR)
         if filename.endswith(".png")
     )
     for name in names:
@@ -154,8 +155,13 @@ def epd_list():
 def epd_show(name):
     """Show the named image on the display."""
 
-    epd = _try_import_epd()
-    epd.display_named_image(name)
+    try:
+        from isopod.epd.display import display_named_image
+    except ImportError as e:
+        log.exception("E-Ink display unavailable", exc_info=e)
+        sys.exit(1)
+
+    display_named_image(name)
 
 
 @epd.command(name="bucket")
@@ -165,9 +171,6 @@ def epd_show(name):
     "--burst-delay", type=float, help="Minimum delay in seconds after taking a token"
 )
 def epd_bucket(capacity, fill_delay, burst_delay):
-    _try_import_epd()
-    from isopod.epd.limit import Bucket, TakeBlocked
-
     bucket = Bucket(capacity=capacity, fill_delay=fill_delay, burst_delay=burst_delay)
     while True:
         try:
@@ -176,13 +179,3 @@ def epd_bucket(capacity, fill_delay, burst_delay):
         except TakeBlocked as e:
             log.info("%0.2f seconds remaining", e.seconds_remaining)
             time.sleep(random.random())
-
-
-def _try_import_epd():
-    try:
-        import isopod.epd
-    except ImportError as e:
-        log.exception("E-Ink display unavailable", exc_info=e)
-        sys.exit(1)
-
-    return isopod.epd
