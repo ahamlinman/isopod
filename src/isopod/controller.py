@@ -44,12 +44,16 @@ class Controller(ABC):
     def canceled(self):
         return self._canceled
 
+    def join(self):
+        self._thread.join()
+
     def _run(self):
         try:
             self._run_reconciler()
         except Exception as e:
-            self._thread = Thread(target=self._run, daemon=self.daemon)
-            self._thread.start()
+            if not self._canceled:
+                self._thread = Thread(target=self._run, daemon=self.daemon)
+                self._thread.start()
             raise e
 
     def _run_reconciler(self):
