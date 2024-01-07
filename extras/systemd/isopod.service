@@ -1,0 +1,22 @@
+[Unit]
+Description=The isopod terminal daemon
+Requisite=dev-cdrom.device
+Requires=isopod-connected.service
+After=dev-cdrom.device
+After=isopod-connected.service
+OnFailure=isopod-systemfail.timer
+Conflicts=isopod-systemfail.timer
+After=isopod-systemfail.timer
+
+[Service]
+EnvironmentFile=/etc/default/isopod
+ExecStart=/opt/isopod/bin/isopod --device=/dev/cdrom --workdir=${STATE_DIRECTORY} --logdir=${LOGS_DIRECTORY} --target=${ISOPOD_TARGET}
+StateDirectory=isopod
+LogsDirectory=isopod
+TimeoutStopSec=1h
+KillMode=mixed
+
+[Install]
+WantedBy=dev-cdrom.device
+WantedBy=isopod-connected.service
+Also=isopod-connected.service isopod-shutdown.service

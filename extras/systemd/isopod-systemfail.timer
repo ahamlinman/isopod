@@ -1,0 +1,5 @@
+[Unit]
+Description=Report failure on the E-Ink display after a delay
+
+[Timer]
+OnActiveSec=30s

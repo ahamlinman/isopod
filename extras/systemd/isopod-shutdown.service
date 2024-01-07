@@ -1,0 +1,13 @@
+[Unit]
+Description=Show the OOB image on the E-Ink display
+DefaultDependencies=no
+Before=shutdown.target
+Before=isopod.service
+Conflicts=isopod.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/isopod/bin/isopod-epd show oob
+
+[Install]
+WantedBy=shutdown.target
