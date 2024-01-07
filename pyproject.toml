@@ -17,6 +17,7 @@ classifiers = [
 
 [project.scripts]
 isopod = "isopod.daemon:main"
+isopod-epd = "isopod.epd.cli:cli"
 isopod-script = "isopod.scripts:cli"
 
 [build-system]
