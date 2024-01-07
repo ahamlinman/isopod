@@ -81,7 +81,7 @@ def main(workdir, logdir, device, target, min_free_bytes):
     os.chdir(workdir)
 
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
-    cleanup_stale_discs()
+    remove_stale_disc_files()
 
     ripper = isopod.ripper.Ripper(
         device_path=device, min_free_bytes=min_free_bytes, event_log_dir=logdir
@@ -110,16 +110,24 @@ def main(workdir, logdir, device, target, min_free_bytes):
     sender.join()
 
 
-def cleanup_stale_discs():
+def remove_stale_disc_files():
     with db.Session() as session:
-        stmt = select(db.Disc).where(
-            db.Disc.status.in_((db.DiscStatus.RIPPABLE, db.DiscStatus.COMPLETE))
-        )
+        stmt = select(db.Disc).filter_by(status=db.DiscStatus.RIPPABLE)
         for disc in session.execute(stmt).scalars():
             isopod.os.force_unlink(disc.path)
             session.delete(disc)
             session.commit()
-            log.info("Cleaned up stale disc %s", disc.path)
+            log.info("Cleaned up incomplete rip %s", disc.path)
+
+        lingering_isos = [path for path in os.listdir() if path.endswith(".iso")]
+        stmt = (
+            select(db.Disc)
+            .where(db.Disc.path.in_(lingering_isos))
+            .filter_by(status=db.DiscStatus.COMPLETE)
+        )
+        for disc in session.execute(stmt).scalars():
+            isopod.os.force_unlink(disc.path)
+            log.info("Cleaned up sent disc %s", disc.path)
 
 
 def wait_for_any_signal_once(*args):

@@ -50,10 +50,8 @@ class Ripper(Controller):
         with db.Session() as session:
             stmt = (
                 select(db.Disc.source_hash)
-                .filter_by(
-                    status=db.DiscStatus.SENDABLE,
-                    source_hash=isopod.linux.get_source_hash(device_path),
-                )
+                .filter_by(source_hash=isopod.linux.get_source_hash(device_path))
+                .where(db.Disc.status != db.DiscStatus.RIPPABLE)
                 .limit(1)
             )
             self._last_source_hash = session.execute(stmt).scalar_one_or_none()

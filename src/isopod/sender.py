@@ -67,12 +67,8 @@ class Sender(Controller):
             disc.status = db.DiscStatus.COMPLETE
             session.merge(disc)
             session.commit()
-            log.info("Finished sending %s", disc.path)
-
             isopod.os.force_unlink(disc.path)
-            session.delete(disc)
-            session.commit()
-            log.info("Cleaned up %s", disc.path)
+            log.info("Sent and cleaned up %s", disc.path)
 
     def _finalize_rsync_failure(self):
         with db.Session() as session:
