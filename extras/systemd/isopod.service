@@ -1,9 +1,16 @@
 [Unit]
 Description=The isopod terminal daemon
+
+# Require initial availability of /dev/cdrom, so isopod can confirm it has read
+# access.
 Requisite=dev-cdrom.device
-Requires=isopod-connected.service
 After=dev-cdrom.device
+
+# See this unit for details.
+Requires=isopod-connected.service
 After=isopod-connected.service
+
+# See this unit for details.
 OnFailure=isopod-systemfail.timer
 Conflicts=isopod-systemfail.timer
 After=isopod-systemfail.timer
@@ -13,6 +20,10 @@ EnvironmentFile=/etc/default/isopod
 ExecStart=/opt/isopod/bin/isopod --device=/dev/cdrom --workdir=${STATE_DIRECTORY} --logdir=${LOGS_DIRECTORY} --target=${ISOPOD_TARGET}
 StateDirectory=isopod
 LogsDirectory=isopod
+
+# Allow isopod to manage the cleanup of its own subprocesses, and give it a
+# long time to allow an in-flight rip to finish (and continue sending as many
+# previous rips as it can).
 TimeoutStopSec=1h
 KillMode=mixed
 

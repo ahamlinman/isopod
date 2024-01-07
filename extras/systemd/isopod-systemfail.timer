@@ -1,3 +1,9 @@
+# isopod.service normally manages the E-Ink status display, but not if it
+# crashes or fails to start in the first place. Since isopod.service depends on
+# isopod-connected.service, which allows about 3 minutes of restarts before it
+# actually fails, we delay the display refresh with a timer so the Conflicts=
+# setting on isopod.service can cancel it.
+
 [Unit]
 Description=Report failure on the E-Ink display after a delay
 

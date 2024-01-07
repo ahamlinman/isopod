@@ -1,3 +1,10 @@
+# While isopod.service is resilient to the loss of its rsync target, it would
+# be a bad experience for an isopod terminal user to rip a bunch of discs
+# before realizing they're not going anywhere. This check is designed to run
+# once per system boot, so that isopod.service can activate its OnFailure=
+# handling for unrecoverable mistakes in the terminal configuration (e.g. you
+# typo'd the WiFi password before shipping it to the end user).
+
 [Unit]
 Description=Check connectivity to the isopod target
 After=network-online.target

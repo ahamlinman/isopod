@@ -1,13 +1,18 @@
 [Unit]
-Description=Show the OOB image on the E-Ink display
+Description=Show the out-of-box setup image on the E-Ink display
 DefaultDependencies=no
 Before=shutdown.target
+
+# Ensure that isopod.service shuts down first, so it's no longer touching the
+# display. The Conflicts= docs say that either Before= or After= could be used
+# here, but in general a shutdown implies the reverse of the "normal" ordering,
+# so Before= seems like the better choice.
 Before=isopod.service
 Conflicts=isopod.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/isopod/bin/isopod-epd show oob
+ExecStart=-/opt/isopod/bin/isopod-epd show oob
 
 [Install]
 WantedBy=shutdown.target

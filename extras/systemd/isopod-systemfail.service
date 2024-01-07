@@ -1,7 +1,13 @@
+# Three things can make isopod.service fail: a missing /dev/cdrom, a failed
+# isopod-connected.service, or the daemon crashing. The /dev/cdrom case is
+# likely a setup issue that can be fixed by (re-)plugging the CD-ROM drive,
+# so we'd rather show a message pointing to those instructions. We do that
+# with a clever combination of ExecStartPre= and OnFailure= (while ignoring
+# errors that somehow happen while displaying the image).
+
 [Unit]
 Description=Report an isopod startup failure
 Before=isopod.service
-Conflicts=isopod.service
 OnFailure=isopod-setupfail.service
 
 [Service]
