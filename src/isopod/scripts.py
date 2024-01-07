@@ -56,6 +56,25 @@ def _print_cdrom_info(dev: Device):
     print(f"{dev.device_node}\t{loaded}\t{diskseq}\t{label}\t{source_hash}")
 
 
+@cli.command()
+@click.option("--capacity", type=int, help="The capacity of the bucket")
+@click.option("--fill-delay", type=float, help="Seconds to wait before adding a token")
+@click.option(
+    "--burst-delay", type=float, help="Minimum delay in seconds after taking a token"
+)
+def bucket(capacity, fill_delay, burst_delay):
+    """Test the token bucket implementation with random sleeps."""
+
+    bucket = Bucket(capacity=capacity, fill_delay=fill_delay, burst_delay=burst_delay)
+    while True:
+        try:
+            bucket.take()
+            log.info("Taken!")
+        except TakeBlocked as e:
+            log.info("%0.2f seconds remaining", e.seconds_remaining)
+            time.sleep(random.random())
+
+
 @cli.group()
 def target():
     """Work with the isopod-target container image."""
@@ -168,20 +187,3 @@ def epd_show(name):
 
     DISPLAY.image(load_named_image(name))
     DISPLAY.display()
-
-
-@epd.command(name="bucket")
-@click.option("--capacity", type=int, help="The capacity of the bucket")
-@click.option("--fill-delay", type=float, help="Seconds to wait before adding a token")
-@click.option(
-    "--burst-delay", type=float, help="Minimum delay in seconds after taking a token"
-)
-def epd_bucket(capacity, fill_delay, burst_delay):
-    bucket = Bucket(capacity=capacity, fill_delay=fill_delay, burst_delay=burst_delay)
-    while True:
-        try:
-            bucket.take()
-            log.info("Taken!")
-        except TakeBlocked as e:
-            log.info("%0.2f seconds remaining", e.seconds_remaining)
-            time.sleep(random.random())
