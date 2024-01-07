@@ -40,6 +40,12 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     help="The directory to stage ISOs and track their status",
 )
 @click.option(
+    "--logdir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True),
+    default=".",
+    help="The directory for ddrescue event logs",
+)
+@click.option(
     "--device",
     type=click.Path(exists=True, readable=True),
     default="/dev/cdrom",
@@ -54,7 +60,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     default=5 * (1024**3),
     help="Only rip when this much space will be free after",
 )
-def main(workdir, device, target, min_free_bytes):
+def main(workdir, logdir, device, target, min_free_bytes):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -77,7 +83,9 @@ def main(workdir, device, target, min_free_bytes):
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     cleanup_stale_discs()
 
-    ripper = isopod.ripper.Ripper(device_path=device, min_free_bytes=min_free_bytes)
+    ripper = isopod.ripper.Ripper(
+        device_path=device, min_free_bytes=min_free_bytes, event_log_dir=logdir
+    )
     sender = isopod.sender.Sender(target)
     reporter = isopod.reporter.Reporter(ripper)
     if isinstance(reporter, isopod.reporter.NullReporter):

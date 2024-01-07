@@ -1,5 +1,6 @@
 import io
 import logging
+import os.path
 import shlex
 import shutil
 import time
@@ -35,10 +36,12 @@ class Ripper(Controller):
         /,
         device_path: str,
         min_free_bytes: int,
+        event_log_dir: str,
     ):
         super().__init__()
         self.device_path = device_path
         self.min_free_bytes = min_free_bytes
+        self.event_log_dir = event_log_dir
 
         self._status = Status.UNKNOWN
         self._watchers: set[Callable] = set()
@@ -113,20 +116,25 @@ class Ripper(Controller):
             self.status = Status.WAITING_FOR_SPACE
             return result
 
-        path = str(time.time_ns())
+        iso_filename = str(time.time_ns())
         if label := isopod.linux.get_fs_label(self._device):
-            path += f"_{label}"
-        path += ".iso"
+            iso_filename += f"_{label}"
+        iso_filename += ".iso"
+
+        event_log_path = os.path.join(self.event_log_dir, f"{iso_filename}.log")
+
         log.info(
             "Ready to rip %s (diskseq=%s) to %s",
             self._device.device_node,
             isopod.linux.get_diskseq(self._device),
-            path,
+            iso_filename,
         )
 
         with db.Session() as session:
             disc = db.Disc(
-                path=path, status=db.DiscStatus.RIPPABLE, source_hash=source_hash
+                path=iso_filename,
+                status=db.DiscStatus.RIPPABLE,
+                source_hash=source_hash,
             )
             session.add(disc)
             session.commit()
@@ -136,9 +144,9 @@ class Ripper(Controller):
             "ddrescue",
             "--idirect",
             "--sector-size=2048",
-            f"--log-events={path}.log",
+            f"--log-events={event_log_path}",
             self._device.device_node,
-            path,
+            iso_filename,
         ]
         self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
         Thread(target=self._poll_after_rip, daemon=True).start()
