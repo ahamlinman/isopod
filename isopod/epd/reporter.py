@@ -1,8 +1,11 @@
 import logging
 
+from sqlalchemy import func, select
+
+from isopod import db
 from isopod.controller import Controller, Reconciled, RepollAfter, Result
 from isopod.epd.display import DISPLAY
-from isopod.epd.images import load_named_image
+from isopod.epd.images import draw_pending_discs, load_named_image
 from isopod.epd.limit import Bucket, TakeBlocked
 from isopod.ripper import Ripper, Status
 
@@ -52,7 +55,9 @@ class Reporter(Controller):
             return RepollAfter(seconds=delay)
 
         name = IMAGE_NAMES_BY_STATUS[self._desired_status]
-        DISPLAY.image(load_named_image(name))
+        img = load_named_image(name)
+        draw_pending_discs(img, _count_sendable_discs())
+        DISPLAY.image(img)
         DISPLAY.display()
         log.info("Displayed %s image", name)
         self._displayed_status = self._desired_status
@@ -60,3 +65,13 @@ class Reporter(Controller):
 
     def cleanup(self):
         self.reconcile()
+
+
+def _count_sendable_discs():
+    with db.Session() as session:
+        stmt = (
+            select(func.count())
+            .select_from(db.Disc)
+            .filter_by(status=db.DiscStatus.SENDABLE)
+        )
+        return session.execute(stmt).scalar_one()
