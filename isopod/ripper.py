@@ -12,6 +12,7 @@ from typing import Callable, Optional
 from pyudev import Device, Monitor, MonitorObserver
 from sqlalchemy import select
 
+import isopod.journal
 import isopod.linux
 import isopod.os
 from isopod import db
@@ -146,7 +147,13 @@ class Ripper(Controller):
             self._device.device_node,
             iso_filename,
         ]
-        self._ripper = Popen(args, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+
+        # TODO: Formalize the pipe handling.
+        output = DEVNULL if True else isopod.journal.namespaced_stream("ddrescue")
+        self._ripper = Popen(args, stdin=DEVNULL, stdout=output, stderr=output)
+        if not isinstance(output, int):
+            output.close()
+
         Thread(target=self._poll_after_rip, daemon=True).start()
         log.info("Running: %s", shlex.join(args))
         self.status = Status.RIPPING
