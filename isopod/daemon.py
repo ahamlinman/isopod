@@ -104,6 +104,7 @@ def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_outpu
 
     ripper.notify(sender.poll)
     ripper.notify(reporter.poll)
+    sender.notify(reporter.poll)
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Received stop signal")

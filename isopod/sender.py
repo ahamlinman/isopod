@@ -3,6 +3,7 @@ import logging
 import shlex
 from subprocess import DEVNULL, Popen
 from threading import Thread
+from typing import Callable
 
 from sqlalchemy import select
 
@@ -20,6 +21,7 @@ class Sender(Controller):
 
         self._rsync = None
         self._current_disc = None
+        self._watchers: set[Callable] = set()
 
         self.poll()
 
@@ -70,6 +72,9 @@ class Sender(Controller):
             isopod.os.force_unlink(disc.path)
             log.info("Sent and cleaned up %s", disc.path)
 
+        for watcher in self._watchers:
+            watcher()
+
     def _finalize_rsync_failure(self):
         with db.Session() as session:
             if (disc := self._current_disc) is None:
@@ -105,3 +110,7 @@ class Sender(Controller):
 
         self._rsync.wait()
         self.poll()
+
+    def notify(self, watcher: Callable):
+        self._watchers |= {watcher}
+        watcher()

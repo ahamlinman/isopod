@@ -58,3 +58,12 @@ class Bucket:
 
         self._take_time = now
         self._take_remaining = available - 1
+
+    @property
+    def seconds_until_full(self):
+        now = time.monotonic()
+        seconds_since_take = now - self._take_time
+        tokens_since_take = seconds_since_take / self.fill_delay
+        available = min(self._take_remaining + tokens_since_take, self.capacity)
+        required = self.capacity - available
+        return self.fill_delay * required
