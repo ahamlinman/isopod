@@ -40,7 +40,6 @@ class Reporter(Controller):
     def reconcile(self):
         ripper_status = self._ripper.status
         if ripper_status == Status.UNKNOWN:
-            log.info("Deferring update; ripper status unknown")
             return Reconciled()  # Wait until we know for sure which image to show.
 
         self._desired.sendable_count = _count_sendable_discs()
@@ -59,7 +58,6 @@ class Reporter(Controller):
             self._desired.ripper_status = ripper_status
 
         if self._displayed == self._desired:
-            log.info("Desired %s matches displayed %s", self._desired, self._displayed)
             return Reconciled()  # We're already up to date.
 
         if self._desired.ripper_status == self._displayed.ripper_status:
@@ -87,7 +85,9 @@ class Reporter(Controller):
             name,
             self._desired.sendable_count,
         )
-        self._displayed = self._desired
+        self._displayed = DisplayState(
+            self._desired.ripper_status, self._desired.sendable_count
+        )
         return Reconciled()
 
     def cleanup(self):
