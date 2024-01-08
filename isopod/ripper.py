@@ -5,14 +5,13 @@ import shlex
 import shutil
 import time
 from enum import Enum, auto
-from subprocess import DEVNULL, Popen, TimeoutExpired
+from subprocess import DEVNULL, PIPE, Popen, TimeoutExpired
 from threading import Thread
 from typing import Callable, Optional
 
 from pyudev import Device, Monitor, MonitorObserver
 from sqlalchemy import select
 
-import isopod.journal
 import isopod.linux
 import isopod.os
 from isopod import db
@@ -38,11 +37,13 @@ class Ripper(Controller):
         device_path: str,
         min_free_bytes: int,
         event_log_dir: str,
+        journal_ddrescue_output: bool,
     ):
         super().__init__()
         self.device_path = device_path
         self.min_free_bytes = min_free_bytes
         self.event_log_dir = event_log_dir
+        self.journal_ddrescue_output = journal_ddrescue_output
 
         self._status = Status.UNKNOWN
         self._watchers: set[Callable] = set()
@@ -148,11 +149,12 @@ class Ripper(Controller):
             iso_filename,
         ]
 
-        # TODO: Formalize the pipe handling.
-        output = DEVNULL if True else isopod.journal.namespaced_stream("ddrescue")
-        self._ripper = Popen(args, stdin=DEVNULL, stdout=output, stderr=output)
-        if not isinstance(output, int):
-            output.close()
+        output = self._get_ripper_output()
+        try:
+            self._ripper = Popen(args, stdin=DEVNULL, stdout=output, stderr=output)
+        finally:
+            if not isinstance(output, int):
+                output.close()
 
         Thread(target=self._poll_after_rip, daemon=True).start()
         log.info("Running: %s", shlex.join(args))
@@ -178,6 +180,25 @@ class Ripper(Controller):
             return RepollAfter(seconds=30)
 
         return None
+
+    def _get_ripper_output(self):
+        if not self.journal_ddrescue_output:
+            return DEVNULL
+
+        args = [
+            "systemd-run",
+            "--pipe",
+            "--quiet",
+            "--collect",
+            "--slice-inherit",
+            f"--property=LogNamespace=ddrescue",
+            "systemd-cat",
+            "-t",
+            "isopod",
+        ]
+        proc = Popen(args, stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL)
+        assert proc.stdin is not None
+        return proc.stdin
 
     def _poll_after_rip(self):
         if self._ripper is None:

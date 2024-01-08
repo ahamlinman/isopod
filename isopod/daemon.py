@@ -60,7 +60,13 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     default=5 * (1024**3),
     help="Only rip when this much space will be free after",
 )
-def main(workdir, logdir, device, target, min_free_bytes):
+@click.option(
+    "--journal-ddrescue-output",
+    is_flag=True,
+    default=False,
+    help='Write ddrescue output to the "isopod-ddrescue" journal namespace',
+)
+def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_output):
     """Watch a CD-ROM drive and rip every disc to a remote server."""
 
     required_cmds = ("ddrescue", "rsync")
@@ -84,7 +90,10 @@ def main(workdir, logdir, device, target, min_free_bytes):
     remove_stale_disc_files()
 
     ripper = isopod.ripper.Ripper(
-        device_path=device, min_free_bytes=min_free_bytes, event_log_dir=logdir
+        device_path=device,
+        min_free_bytes=min_free_bytes,
+        event_log_dir=logdir,
+        journal_ddrescue_output=journal_ddrescue_output,
     )
     sender = isopod.sender.Sender(target)
     reporter = isopod.reporter.Reporter(ripper)
