@@ -64,7 +64,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
     "--journal-ddrescue-output",
     is_flag=True,
     default=False,
-    help='Write ddrescue output to the "isopod-ddrescue" journal namespace',
+    help='Write ddrescue output to the "isopod-ripper" journal namespace',
 )
 def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_output):
     """Watch a CD-ROM drive and rip every disc to a remote server."""

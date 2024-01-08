@@ -191,10 +191,10 @@ class Ripper(Controller):
             "--quiet",
             "--collect",
             "--slice-inherit",
-            f"--property=LogNamespace=ddrescue",
+            f"--property=LogNamespace=isopod-ripper",
             "systemd-cat",
             "-t",
-            "isopod",
+            "ddrescue",
         ]
         proc = Popen(args, stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL)
         assert proc.stdin is not None
