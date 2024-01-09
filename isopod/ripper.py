@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 
 
 class Status(Enum):
-    UNKNOWN = auto()
     DRIVE_EMPTY = auto()
     WAITING_FOR_SPACE = auto()
     RIPPING = auto()
@@ -45,24 +44,32 @@ class Ripper(Controller):
         self.event_log_dir = event_log_dir
         self.journal_ddrescue_output = journal_ddrescue_output
 
-        self._status = Status.UNKNOWN
-        self._watchers: set[Callable] = set()
-
-        self._ripper = None
-        with db.Session() as session:
-            stmt = (
-                select(db.Disc.source_hash)
-                .filter_by(source_hash=isopod.linux.get_source_hash(device_path))
-                .where(db.Disc.status != db.DiscStatus.RIPPABLE)
-                .limit(1)
-            )
-            self._last_source_hash = session.execute(stmt).scalar_one_or_none()
-
         monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
         self._udev_observer = MonitorObserver(monitor, callback=self._update_device)
         self._device = isopod.linux.get_device(self.device_path)
         self._udev_observer.start()
         self._device = isopod.linux.get_device(self.device_path)
+
+        self._ripper = None
+        self._watchers: set[Callable] = set()
+
+        current_source_hash = isopod.linux.get_source_hash(self.device_path)
+        with db.Session() as session:
+            stmt = (
+                select(db.Disc.source_hash)
+                .filter_by(source_hash=current_source_hash)
+                .where(db.Disc.status != db.DiscStatus.RIPPABLE)
+                .limit(1)
+            )
+            if (found := session.execute(stmt).scalar_one_or_none()) is not None:
+                self._status = Status.LAST_SUCCEEDED
+                self._last_source_hash = found
+            else:
+                self._status = Status.DRIVE_EMPTY
+                self._last_source_hash = (
+                    current_source_hash if isopod.linux.is_fresh_boot() else None
+                )
+
         self.poll()
 
     def _update_device(self, dev: Device):
@@ -94,8 +101,6 @@ class Ripper(Controller):
                     self._finalize_rip_failure(returncode)
 
         if source_hash == self._last_source_hash:
-            if self.status == Status.UNKNOWN:
-                self.status = Status.LAST_SUCCEEDED
             return Reconciled()
 
         if not loaded:

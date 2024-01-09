@@ -1,3 +1,5 @@
+import os
+from functools import cache
 from hashlib import sha256
 from pathlib import Path
 from threading import local
@@ -6,8 +8,20 @@ from typing import Iterable, Optional
 from pyudev import Context, Device, Devices, Enumerator
 
 
+@cache
 def get_boot_id() -> str:
-    return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+    return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf8").strip()
+
+
+def is_fresh_boot() -> bool:
+    runtime_dir = os.environ.get("RUNTIME_DIRECTORY", ".")
+    bid_file = Path(runtime_dir, "current-boot-id")
+    old_bid = bid_file.read_text(encoding="utf8").strip() if bid_file.exists() else None
+    if old_bid != get_boot_id():
+        bid_file.write_text(get_boot_id(), encoding="utf8")
+        return True
+
+    return False
 
 
 class UdevThreadLocal(local):

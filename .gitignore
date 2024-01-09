@@ -4,6 +4,7 @@
 __pycache__
 /build
 /dist
+/current-boot-id
 /*.sqlite3
 /*.iso
 /*.iso.log

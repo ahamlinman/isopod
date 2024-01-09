@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import Optional
 
 from sqlalchemy import func, select
 
@@ -24,8 +25,8 @@ IMAGE_NAMES_BY_STATUS = {
 
 @dataclass
 class DisplayState:
-    ripper_status: Status
-    sendable_count: int
+    status: Optional[Status]
+    disc_count: int
 
 
 class Reporter(Controller):
@@ -34,20 +35,16 @@ class Reporter(Controller):
         self._bucket = Bucket(capacity=3, fill_delay=180, burst_delay=30)
         self._ripper = ripper
         self._desired = DisplayState(self._ripper.status, 0)
-        self._displayed = DisplayState(Status.UNKNOWN, 0)
+        self._displayed = DisplayState(None, 0)
         self.poll()
 
     def reconcile(self):
+        # If the ripper is in a terminal state for a given disc, keep that
+        # status on the display even after removing the disc from the drive.
         ripper_status = self._ripper.status
-        if ripper_status == Status.UNKNOWN:
-            return Reconciled()  # Wait until we know for sure which image to show.
-
-        self._desired.sendable_count = _count_sendable_discs()
-
-        # Don't wipe out useful status messages just because the drive was emptied.
         skip_ripper_update = (
             ripper_status == Status.DRIVE_EMPTY
-            and self._desired.ripper_status
+            and self._desired.status
             in (
                 Status.DISC_INVALID,
                 Status.LAST_SUCCEEDED,
@@ -55,17 +52,20 @@ class Reporter(Controller):
             )
         )
         if not skip_ripper_update:
-            self._desired.ripper_status = ripper_status
+            self._desired.status = ripper_status
+
+        self._desired.disc_count = _count_sendable_discs()
 
         if self._displayed == self._desired:
-            return Reconciled()  # We're already up to date.
+            return Reconciled()
 
-        if self._desired.ripper_status == self._displayed.ripper_status:
-            # If the only change is in the pending disc count, defer this update
-            # until the token bucket is filled to capacity, or until we need to
-            # update the ripper status.
+        # Many ripper updates come about through user action, so they deserve
+        # the limited refresh cycles more than disc count changes. If the only
+        # change is in the disc count, defer it until the bucket is filled to
+        # capacity, or until a status update comes in.
+        if self._desired.status == self._displayed.status:
             if (delay := self._bucket.seconds_until_full) > 0:
-                log.info("Deferring sendable disc update for %0.2f seconds", delay)
+                log.info("Deferring disc count update for %0.2f seconds", delay)
                 return RepollAfter(seconds=delay)
 
         try:
@@ -75,19 +75,18 @@ class Reporter(Controller):
             log.info("Can refresh display in %0.2f seconds", delay)
             return RepollAfter(seconds=delay)
 
-        name = IMAGE_NAMES_BY_STATUS[self._desired.ripper_status]
+        assert self._desired.status is not None
+        name = IMAGE_NAMES_BY_STATUS[self._desired.status]
         img = load_named_image(name)
-        draw_pending_discs(img, self._desired.sendable_count)
+        draw_pending_discs(img, self._desired.disc_count)
         DISPLAY.image(img)
         DISPLAY.display()
         log.info(
             "Displayed %s image with %d pending disc(s)",
             name,
-            self._desired.sendable_count,
+            self._desired.disc_count,
         )
-        self._displayed = DisplayState(
-            self._desired.ripper_status, self._desired.sendable_count
-        )
+        self._displayed = DisplayState(self._desired.status, self._desired.disc_count)
         return Reconciled()
 
     def cleanup(self):
