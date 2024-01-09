@@ -15,10 +15,8 @@ class TakeBlocked(Exception):
 @dataclass
 class Bucket:
     """
-    A specialized token bucket for use with the E-Ink display that Isopod
-    supports, which is not designed to refresh more than once every few minutes.
-    In addition to the normal behavior of a token bucket, this bucket enforces a
-    minimum delay between taking tokens regardless of how many are available.
+    A token bucket that enforces a minimum delay between tokens regardless of
+    how many are available.
     """
 
     capacity: int
@@ -37,13 +35,17 @@ class Bucket:
         self._take_remaining = self.capacity
 
     def take(self):
+        """
+        Take exactly 1 token from the bucket, or raise :exception:`TakeBlocked`
+        if the bucket does not have 1 full token available.
+        """
+
         now = time.monotonic()
         seconds_since_take = now - self._take_time
         tokens_since_take = seconds_since_take / self.fill_delay
         available = min(self._take_remaining + tokens_since_take, self.capacity)
         delays = []
 
-        assert available >= 0
         if available < 1:
             tokens_missing = 1 - available
             fill_time = now + (self.fill_delay * tokens_missing)
@@ -61,6 +63,11 @@ class Bucket:
 
     @property
     def seconds_until_full(self):
+        """
+        The duration in seconds after which the bucket will be filled to
+        capacity if no :meth:`take` occurs.
+        """
+
         now = time.monotonic()
         seconds_since_take = now - self._take_time
         tokens_since_take = seconds_since_take / self.fill_delay
