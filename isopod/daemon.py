@@ -86,6 +86,7 @@ def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_outpu
     log.info("Entering workdir: %s", workdir)
     os.chdir(workdir)
 
+    isopod.linux.init_fresh_boot()
     db.setup(create_engine(f"sqlite+pysqlite:///isopod.sqlite3"))
     remove_stale_disc_files()
 
