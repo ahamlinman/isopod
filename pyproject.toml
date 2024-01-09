@@ -1,6 +1,6 @@
 [project]
 name = "isopod"
-version = "0.0.4.dev8"
+version = "0.0.4.dev9"
 description = "Rip ISOs to remote storage with minimal fuss"
 requires-python = ">=3.11"
 authors = [{ name = "Alex Hamlin", email = "alex@alexhamlin.co" }]

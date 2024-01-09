@@ -25,8 +25,8 @@ def init_fresh_boot():
     if old_bid != get_boot_id():
         bid_file.write_text(get_boot_id(), encoding="utf8")
         _IS_FRESH_BOOT = True
-
-    _IS_FRESH_BOOT = False
+    else:
+        _IS_FRESH_BOOT = False
 
 
 def is_fresh_boot():

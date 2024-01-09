@@ -54,7 +54,7 @@ class Ripper(Controller):
         self._ripper = None
         self._watchers: set[Callable] = set()
 
-        current_source_hash = isopod.linux.get_source_hash(self.device_path)
+        current_source_hash = isopod.linux.get_source_hash(self._device)
         with db.Session() as session:
             stmt = (
                 select(db.Disc.source_hash)
