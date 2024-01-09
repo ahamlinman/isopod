@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 
 class Status(Enum):
+    UNKNOWN = auto()
     DRIVE_EMPTY = auto()
     WAITING_FOR_SPACE = auto()
     RIPPING = auto()
@@ -64,11 +65,12 @@ class Ripper(Controller):
             if (found := session.execute(stmt).scalar_one_or_none()) is not None:
                 self._status = Status.LAST_SUCCEEDED
                 self._last_source_hash = found
-            else:
+            elif isopod.linux.is_fresh_boot():
                 self._status = Status.DRIVE_EMPTY
-                self._last_source_hash = (
-                    current_source_hash if isopod.linux.is_fresh_boot() else None
-                )
+                self._last_source_hash = current_source_hash
+            else:
+                self._status = Status.UNKNOWN
+                self._last_source_hash = None
 
         self.poll()
 

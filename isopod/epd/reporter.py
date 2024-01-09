@@ -25,7 +25,7 @@ IMAGE_NAMES_BY_STATUS = {
 
 @dataclass
 class DisplayState:
-    status: Optional[Status]
+    status: Status
     disc_count: int
 
 
@@ -35,13 +35,16 @@ class Reporter(Controller):
         self._bucket = Bucket(capacity=3, fill_delay=180, burst_delay=30)
         self._ripper = ripper
         self._desired = DisplayState(self._ripper.status, 0)
-        self._displayed = DisplayState(None, 0)
+        self._displayed = DisplayState(Status.UNKNOWN, 0)
         self.poll()
 
     def reconcile(self):
+        ripper_status = self._ripper.status
+        if ripper_status == Status.UNKNOWN:
+            return Reconciled()
+
         # If the ripper is in a terminal state for a given disc, keep that
         # status on the display even after removing the disc from the drive.
-        ripper_status = self._ripper.status
         skip_ripper_update = (
             ripper_status == Status.DRIVE_EMPTY
             and self._desired.status
@@ -75,7 +78,6 @@ class Reporter(Controller):
             log.info("Can refresh display in %0.2f seconds", delay)
             return RepollAfter(seconds=delay)
 
-        assert self._desired.status is not None
         name = IMAGE_NAMES_BY_STATUS[self._desired.status]
         img = load_named_image(name)
         draw_pending_discs(img, self._desired.disc_count)
