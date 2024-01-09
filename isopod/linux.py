@@ -13,7 +13,7 @@ def get_boot_id() -> str:
     return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf8").strip()
 
 
-def is_fresh_boot() -> bool:
+def _is_fresh_boot() -> bool:
     runtime_dir = os.environ.get("RUNTIME_DIRECTORY", ".")
     bid_file = Path(runtime_dir, "current-boot-id")
     old_bid = bid_file.read_text(encoding="utf8").strip() if bid_file.exists() else None
@@ -22,6 +22,9 @@ def is_fresh_boot() -> bool:
         return True
 
     return False
+
+
+IS_FRESH_BOOT = _is_fresh_boot()
 
 
 class UdevThreadLocal(local):

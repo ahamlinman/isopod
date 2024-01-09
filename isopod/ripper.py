@@ -67,7 +67,7 @@ class Ripper(Controller):
             else:
                 self._status = Status.DRIVE_EMPTY
                 self._last_source_hash = (
-                    current_source_hash if isopod.linux.is_fresh_boot() else None
+                    current_source_hash if isopod.linux.IS_FRESH_BOOT else None
                 )
 
         self.poll()
