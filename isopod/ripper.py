@@ -151,6 +151,7 @@ class Ripper(Controller):
             "ddrescue",
             "--idirect",
             "--sector-size=2048",
+            "--timeout=30m",
             f"--log-events={event_log_path}",
             self._device.device_node,
             iso_filename,
