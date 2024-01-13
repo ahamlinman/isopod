@@ -1,4 +1,3 @@
-import os
 from functools import cache
 from hashlib import sha256
 from pathlib import Path
@@ -6,6 +5,9 @@ from threading import local
 from typing import Iterable, Optional
 
 from pyudev import Context, Device, Devices, Enumerator
+
+# Re-exported for consumer use.
+from pyudev import DeviceNotFoundByFileError  # isort: split
 
 
 @cache

@@ -47,7 +47,7 @@ context_settings = {"help_option_names": ["-h", "--help"]}
 )
 @click.option(
     "--device",
-    type=click.Path(exists=True, readable=True),
+    type=click.Path(exists=False, readable=True),
     default="/dev/cdrom",
     help="The CD-ROM drive to rip from",
 )
@@ -74,12 +74,6 @@ def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_outpu
     if missing_cmds:
         log.critical("Missing required commands: %s", missing_cmds)
         log.critical("Isopod needs these installed to rip and send discs")
-        sys.exit(1)
-
-    if isopod.linux.get_diskseq(device) is None:
-        log.critical("%s has no diskseq property in udev", device)
-        log.critical("Isopod will behave erratically in this configuration")
-        log.critical("Try a newer kernel, systemd, udev, etc.")
         sys.exit(1)
 
     workdir = os.path.abspath(workdir)

@@ -45,14 +45,24 @@ class Ripper(Controller):
         self.event_log_dir = event_log_dir
         self.journal_ddrescue_output = journal_ddrescue_output
 
-        monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
-        self._udev_observer = MonitorObserver(monitor, callback=self._update_device)
-        self._device = isopod.linux.get_device(self.device_path)
-        self._udev_observer.start()
-        self._device = isopod.linux.get_device(self.device_path)
-
         self._ripper = None
         self._watchers: set[Callable] = set()
+        self._status = Status.UNKNOWN
+        self._last_source_hash = None
+
+        monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
+        self._udev_observer = MonitorObserver(monitor, callback=self._update_device)
+        self._device = None
+        self._udev_observer.start()
+        try:
+            if (dev := isopod.linux.get_device(self.device_path)) is not None:
+                self._update_device(dev, poll=False)
+        except isopod.linux.DeviceNotFoundByFileError:
+            pass
+
+        if self._device is None:
+            log.warn("Waiting for %s to exist on the system", self.device_path)
+            return
 
         current_source_hash = isopod.linux.get_source_hash(self._device)
         with db.Session() as session:
@@ -68,25 +78,38 @@ class Ripper(Controller):
             elif isopod.linux.is_fresh_boot():
                 self._status = Status.DRIVE_EMPTY
                 self._last_source_hash = current_source_hash
-            else:
-                self._status = Status.UNKNOWN
-                self._last_source_hash = None
 
         self.poll()
 
-    def _update_device(self, dev: Device):
-        if dev != self._device:
+    def _update_device(self, newdev: Device, poll=True):
+        try:
+            olddev = self._device or isopod.linux.get_device(self.device_path)
+        except isopod.linux.DeviceNotFoundByFileError:
+            return
+        if newdev != olddev:
             return
 
-        if oldseq := isopod.linux.get_diskseq(self._device):
-            newseq = isopod.linux.get_diskseq(dev)
+        if (oldseq := isopod.linux.get_diskseq(olddev)) is not None:
+            newseq = isopod.linux.get_diskseq(newdev)
             if newseq and int(oldseq) > int(newseq):
                 return
+        else:
+            raise Exception("Device has no diskseq property in udev")
 
-        self._device = dev
-        self.poll()
+        if self._device is None:
+            log.info("Matched %s to %s", self.device_path, newdev.sys_path)
+
+        self._device = newdev
+
+        # TODO: The conditional here is a bad hack to let __init__ call this
+        # before everything is fully initialized.
+        if poll:
+            self.poll()
 
     def reconcile(self) -> Result:
+        if self._device is None:
+            return Reconciled()
+
         source_hash = isopod.linux.get_source_hash(self._device)
         loaded = isopod.linux.is_cdrom_loaded(self._device)
 
