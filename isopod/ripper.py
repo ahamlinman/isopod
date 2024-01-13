@@ -120,7 +120,6 @@ class Ripper(Controller):
                 return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
-            self.status = Status.WAITING_FOR_SPACE
             return result
 
         iso_filename = str(time.time_ns())
@@ -176,20 +175,17 @@ class Ripper(Controller):
 
         df = shutil.disk_usage(".")
         if need_free > df.total:
-            # TODO: We end up reporting the status on this as if we're just
-            # waiting for space, even though it's kind of a critical error in
-            # the hardware configuration (or at least we treat it like one
-            # instead of expecting the user to online resize the filesystem in
-            # the next 30 seconds). Is this extra check even worth keeping?
             log.error(
                 "Disc too large; need %d bytes free, have %d total in filesystem",
                 need_free,
                 df.total,
             )
+            self.status = Status.LAST_FAILED
             return Reconciled()
 
         if df.free < need_free:
             log.info("%d bytes free, waiting for at least %d", df.free, need_free)
+            self.status = Status.WAITING_FOR_SPACE
             return RepollAfter(seconds=30)
 
         return None
