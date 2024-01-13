@@ -105,9 +105,10 @@ class Sender(Controller):
             return session.execute(stmt).scalars().first()
 
     def _poll_after_rsync(self):
-        assert self._rsync is not None
-        self._rsync.wait()
-        self.poll()
+        rsync = self._rsync
+        if rsync is not None:
+            rsync.wait()
+            self.poll()
 
     def notify(self, watcher: Callable):
         self._watchers |= {watcher}
