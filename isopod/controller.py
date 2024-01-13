@@ -4,39 +4,85 @@ from threading import Event, Thread, Timer
 
 
 class Result(ABC):
+    """Base class for values returned by :meth:`Controller.reconcile`."""
+
     pass
 
 
 class Reconciled(Result):
+    """The controller will only reconcile again after the next explicit poll."""
+
     pass
 
 
 @dataclass
 class RepollAfter(Result):
+    """
+    The controller will reconcile again after the next explicit poll, or after
+    the provided number of seconds have passed with no other poll attempt.
+    """
+
     seconds: float
 
 
 class Controller(ABC):
-    def __init__(self, daemon=False):
-        self.daemon = daemon
+    """
+    A representation of logic that incrementally drives the actual state of the
+    world toward a desired state upon request.
+    """
+
+    # TODO: Controllers are currently implemented with a per-instance background
+    # thread, NOT because I think this is a good idea or the right way to do it.
+    # This was just the first idea I had with the semantics I wanted
+    # (re-converge your state of the world at some future point, ideally soon)
+    # that didn't seem to need some higher-level "manager" abstraction.
+    #
+    # Really, though, a higher-level "manager" seems like the right idea. At the
+    # very least, I'd like for control logic to be implemented in plain Python
+    # objects without subclassing Controller, since the start of the background
+    # thread can race with the subclass __init__ in annoying ways as the state
+    # and its setup get more complex.
+
+    def __init__(self):
         self._trigger = Event()
         self._canceled = False
         self._repoller = None
-        self._thread = Thread(target=self._run, daemon=self.daemon)
+        self._thread = Thread(target=self._run, daemon=False)
         self._thread.start()
 
     @abstractmethod
     def reconcile(self) -> Result:
+        """
+        Analyze the current state of the world, and perform all work required to
+        converge it with some desired state of the world. To be implemented by
+        subclasses and invoked by the controller.
+
+        A :class:`Controller` invokes `reconcile` in a separate thread shortly
+        after one or more calls to :meth:`poll`, never making more than one
+        concurrent call to the same reconciler. Reconcilers should return
+        quickly, and manage threads or subprocesses for long-running work. To
+        sleep for a period of time, use :class:`RepollAfter` rather than
+        sleeping directly.
+        """
+
         pass
 
     @abstractmethod
     def cleanup(self):
+        """
+        Cancel any asynchronous work that this controller is responsible for
+        managing, and wait for it to finish before returning. To be implemented
+        by subclasses and invoked by the controller.
+        """
+
         pass
 
     def poll(self):
+        """Schedule a call to the reconciler in the background shortly in the future."""
         self._trigger.set()
 
     def cancel(self):
+        """Request that the controller cancel any pending work."""
         self._canceled = True
         self._trigger.set()
 
@@ -45,18 +91,15 @@ class Controller(ABC):
         return self._canceled
 
     def join(self):
+        """Wait for the controller to finish pending work after cancellation."""
         self._thread.join()
 
     def _run(self):
-        try:
-            self._run_reconciler()
-        except Exception as e:
-            if not self._canceled:
-                self._thread = Thread(target=self._run, daemon=self.daemon)
-                self._thread.start()
-            raise e
-
-    def _run_reconciler(self):
+        # TODO: If the reconciler raises an exception, the controller will just
+        # break forever under Python's default thread exception behavior (print
+        # the exception and terminate only that thread). The Isopod daemon
+        # overrides the exception hook to exit the process, but if this were
+        # ever to be a proper abstraction it couldn't rely on that behavior.
         while self._trigger.wait():
             if self._repoller is not None:
                 self._repoller.cancel()
