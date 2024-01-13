@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 import isopod.os
 from isopod import db
-from isopod.controller import Controller, Reconciled, RepollAfter, Result
+from isopod.controller import Controller, EventSet, Reconciled, RepollAfter, Result
 
 log = logging.getLogger(__name__)
 
@@ -19,9 +19,10 @@ class Sender(Controller):
         super().__init__()
         self.target_base = target_base
 
+        self.on_send_success = EventSet()
+
         self._rsync = None
         self._current_disc = None
-        self._watchers: set[Callable] = set()
 
         self.poll()
 
@@ -72,8 +73,7 @@ class Sender(Controller):
             isopod.os.force_unlink(disc.path)
             log.info("Sent and cleaned up %s", disc.path)
 
-        for watcher in self._watchers:
-            watcher()
+        self.on_send_success.dispatch()
 
     def _finalize_rsync_failure(self):
         with db.Session() as session:
@@ -109,7 +109,3 @@ class Sender(Controller):
         if rsync is not None:
             rsync.wait()
             self.poll()
-
-    def notify(self, watcher: Callable):
-        self._watchers |= {watcher}
-        watcher()

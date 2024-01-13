@@ -103,9 +103,9 @@ def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_outpu
     else:
         isopod.reporter.log.info("Reporting status to E-Ink display")
 
-    ripper.notify(sender.poll)
-    ripper.notify(reporter.poll)
-    sender.notify(reporter.poll)
+    ripper.on_status_change.add(sender.poll)
+    ripper.on_status_change.add(reporter.poll)
+    sender.on_send_success.add(reporter.poll)
 
     wait_for_any_signal_once(signal.SIGINT, signal.SIGTERM)
     log.info("Received stop signal")

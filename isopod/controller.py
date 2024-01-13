@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Event, Thread, Timer
+from typing import Callable
 
 
 class Result(ABC):
@@ -118,3 +119,15 @@ class Controller(ABC):
                 case RepollAfter(seconds=seconds):
                     self._repoller = Timer(seconds, self.poll)
                     self._repoller.start()
+
+
+class EventSet:
+    def __init__(self):
+        self.handlers: set[Callable] = set()
+
+    def add(self, fn: Callable):
+        self.handlers |= {fn}
+
+    def dispatch(self):
+        for fn in self.handlers:
+            fn()

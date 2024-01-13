@@ -15,7 +15,7 @@ from sqlalchemy import select
 import isopod.linux
 import isopod.os
 from isopod import db
-from isopod.controller import Controller, Reconciled, RepollAfter, Result
+from isopod.controller import Controller, EventSet, Reconciled, RepollAfter, Result
 
 log = logging.getLogger(__name__)
 
@@ -45,14 +45,15 @@ class Ripper(Controller):
         self.event_log_dir = event_log_dir
         self.journal_ddrescue_output = journal_ddrescue_output
 
+        self.on_status_change = EventSet()
+
+        self._ripper = None
+
         monitor = Monitor.from_netlink(isopod.linux.UDEV.context)
         self._udev_observer = MonitorObserver(monitor, callback=self._update_device)
         self._device = isopod.linux.get_device(self.device_path)
         self._udev_observer.start()
         self._device = isopod.linux.get_device(self.device_path)
-
-        self._ripper = None
-        self._watchers: set[Callable] = set()
 
         current_source_hash = isopod.linux.get_source_hash(self._device)
         with db.Session() as session:
@@ -285,9 +286,4 @@ class Ripper(Controller):
     def status(self, value: Status):
         if self._status != value:
             self._status = value
-            for watcher in self._watchers:
-                watcher()
-
-    def notify(self, watcher: Callable):
-        self._watchers |= {watcher}
-        watcher()
+            self.on_status_change.dispatch()
