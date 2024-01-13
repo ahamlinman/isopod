@@ -109,33 +109,22 @@ class Ripper(Controller):
             self.status = Status.DRIVE_EMPTY
             return Reconciled()
 
-        with open(self._device.device_node, "rb") as disc:  # type: ignore
-            try:
-                # https://wiki.osdev.org/ISO_9660#Volume_Descriptors
-                disc.seek(16 * 2048)
-                disc.read(2048)
-            except:
-                log.warn("Quick read check failed, refusing to rip disc")
-                self.status = Status.DISC_INVALID
-                return Reconciled()
+        if not self._can_read_disc_volume_descriptor():
+            log.warn("Quick read check failed, refusing to rip disc")
+            self.status = Status.DISC_INVALID
+            return Reconciled()
 
         if (result := self._check_min_free_space()) is not None:
             return result
 
-        iso_filename = str(time.time_ns())
-        if label := isopod.linux.get_fs_label(self._device):
-            iso_filename += f"_{label}"
-        iso_filename += ".iso"
-
-        event_log_path = os.path.join(self.event_log_dir, f"{iso_filename}.log")
-
+        self._last_source_hash = source_hash
+        iso_filename = self._get_iso_filename()
         log.info(
             "Ready to rip %s (diskseq=%s) to %s",
             self._device.device_node,
             isopod.linux.get_diskseq(self._device),
             iso_filename,
         )
-
         with db.Session() as session:
             disc = db.Disc(
                 path=iso_filename,
@@ -145,18 +134,16 @@ class Ripper(Controller):
             session.add(disc)
             session.commit()
 
-        self._last_source_hash = source_hash
+        output = self._get_ripper_output()
         args = [
             "ddrescue",
             "--idirect",
             "--sector-size=2048",
             "--timeout=30m",
-            f"--log-events={event_log_path}",
+            f"--log-events={os.path.join(self.event_log_dir, f'{iso_filename}.log')}",
             self._device.device_node,
             iso_filename,
         ]
-
-        output = self._get_ripper_output()
         try:
             self._ripper = Popen(args, stdin=DEVNULL, stdout=output, stderr=output)
         finally:
@@ -167,6 +154,18 @@ class Ripper(Controller):
         log.info("Running: %s", shlex.join(args))
         self.status = Status.RIPPING
         return Reconciled()
+
+    def _can_read_disc_volume_descriptor(self) -> bool:
+        # See https://wiki.osdev.org/ISO_9660#Volume_Descriptors.
+        SECTOR_SIZE = 2048
+        assert self._device.device_node is not None
+        with open(self._device.device_node, "rb") as disc:
+            try:
+                disc.seek(16 * SECTOR_SIZE)
+                disc.read(SECTOR_SIZE)
+                return True
+            except:
+                return False
 
     def _check_min_free_space(self) -> Optional[Result]:
         with open(self._device.device_node, "rb") as blk:  # type: ignore
@@ -190,6 +189,12 @@ class Ripper(Controller):
 
         return None
 
+    def _get_iso_filename(self):
+        name = str(time.time_ns())
+        if label := isopod.linux.get_fs_label(self._device):
+            name += f"_{label}"
+        return f"{name}.iso"
+
     def _get_ripper_output(self):
         if not self.journal_ddrescue_output:
             return DEVNULL
@@ -210,15 +215,14 @@ class Ripper(Controller):
         return proc.stdin
 
     def _poll_after_rip(self):
-        assert self._ripper is not None
-        self._ripper.wait()
-        self.poll()
+        ripper = self._ripper
+        if ripper is not None:
+            ripper.wait()
+            self.poll()
 
     def cleanup(self):
         self._udev_observer.stop()
-        self._wait_for_last_rip()
 
-    def _wait_for_last_rip(self):
         if self._ripper is None:
             return
 
