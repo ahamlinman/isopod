@@ -60,8 +60,8 @@ class Sender(Controller):
 
     def _finalize_rsync_success(self):
         with db.Session() as session:
-            if (disc := self._current_disc) is None:
-                raise TypeError("missing current disc")
+            disc = self._current_disc
+            assert disc is not None
 
             self._rsync = None
             self._current_disc = None
@@ -77,8 +77,8 @@ class Sender(Controller):
 
     def _finalize_rsync_failure(self):
         with db.Session() as session:
-            if (disc := self._current_disc) is None:
-                raise TypeError("missing current disc")
+            disc = self._current_disc
+            assert disc is not None
 
             self._rsync = None
             self._current_disc = None
@@ -105,9 +105,7 @@ class Sender(Controller):
             return session.execute(stmt).scalars().first()
 
     def _poll_after_rsync(self):
-        if self._rsync is None:
-            raise TypeError("missing rsync process")
-
+        assert self._rsync is not None
         self._rsync.wait()
         self.poll()
 

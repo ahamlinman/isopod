@@ -176,6 +176,11 @@ class Ripper(Controller):
 
         df = shutil.disk_usage(".")
         if need_free > df.total:
+            # TODO: We end up reporting the status on this as if we're just
+            # waiting for space, even though it's kind of a critical error in
+            # the hardware configuration (or at least we treat it like one
+            # instead of expecting the user to online resize the filesystem in
+            # the next 30 seconds). Is this extra check even worth keeping?
             log.error(
                 "Disc too large; need %d bytes free, have %d total in filesystem",
                 need_free,
@@ -209,9 +214,7 @@ class Ripper(Controller):
         return proc.stdin
 
     def _poll_after_rip(self):
-        if self._ripper is None:
-            raise TypeError("missing rip process")
-
+        assert self._ripper is not None
         self._ripper.wait()
         self.poll()
 
