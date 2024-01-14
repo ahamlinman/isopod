@@ -7,7 +7,7 @@ class TakeBlocked(Exception):
     """
     Raised by :meth:`Bucket.take` when it is not possible to take a token.
 
-    :property seconds_remaining: How long to wait before retrying
+    :param seconds_remaining: How long to wait before retrying
     """
 
     seconds_remaining: float
@@ -19,9 +19,9 @@ class Bucket:
     A token bucket that enforces a minimum delay between tokens regardless of
     how many are available.
 
-    :property capacity: The maximum number of tokens the bucket can hold
-    :property fill_delay: Delay in seconds between token deposits (inverse of fill rate)
-    :property burst_delay: Minimum delay in seconds between taking tokens
+    :param capacity: The maximum number of tokens the bucket can hold
+    :param fill_delay: Delay in seconds between token deposits (inverse of fill rate)
+    :param burst_delay: Minimum delay in seconds between taking tokens
     """
 
     capacity: int
