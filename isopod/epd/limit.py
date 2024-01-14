@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 class TakeBlocked(Exception):
     """
     Raised by :meth:`Bucket.take` when it is not possible to take a token.
-    :property:`seconds_remaining` indicates how long to wait before retrying.
+
+    :property seconds_remaining: How long to wait before retrying
     """
 
     seconds_remaining: float
@@ -17,6 +18,10 @@ class Bucket:
     """
     A token bucket that enforces a minimum delay between tokens regardless of
     how many are available.
+
+    :property capacity: The maximum number of tokens the bucket can hold
+    :property fill_delay: Delay in seconds between token deposits (inverse of fill rate)
+    :property burst_delay: Minimum delay in seconds between taking tokens
     """
 
     capacity: int
@@ -27,17 +32,15 @@ class Bucket:
     _take_remaining: float = field(default=0, init=False)
 
     def __post_init__(self):
-        if self.capacity < 1:
-            raise ValueError("capacity must be at least 1")
-        if self.fill_delay <= 0:
-            raise ValueError("fill_delay must be greater than 0")
-
+        assert self.capacity >= 1, "capacity must be at least 1"
+        assert self.fill_delay > 0, "fill_delay must be greater than 0"
         self._take_remaining = self.capacity
 
     def take(self):
         """
-        Take exactly 1 token from the bucket, or raise :exception:`TakeBlocked`
-        if the bucket does not have 1 full token available.
+        Take exactly 1 token from the bucket.
+
+        :raises TakeBlocked: when the bucket does not have 1 full token available
         """
 
         now = time.monotonic()
