@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from sqlalchemy import func, select
 
@@ -38,7 +37,7 @@ class Reporter(Controller):
         self._displayed = DisplayState(Status.UNKNOWN, 0)
         self.poll()
 
-    def reconcile(self):
+    def reconcile(self) -> Result:
         ripper_status = self._ripper.status
         if ripper_status == Status.UNKNOWN:
             return Reconciled()

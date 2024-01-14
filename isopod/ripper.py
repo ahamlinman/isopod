@@ -7,7 +7,7 @@ import time
 from enum import Enum, auto
 from subprocess import DEVNULL, PIPE, Popen, TimeoutExpired
 from threading import Thread
-from typing import Callable, Optional
+from typing import Optional
 
 from pyudev import Device, Monitor, MonitorObserver
 from sqlalchemy import select
