@@ -1,9 +1,0 @@
-# See isopod-systemfail.service for details.
-
-[Unit]
-Description=Report an isopod startup failure due to a missing CD-ROM drive
-Before=isopod.service
-
-[Service]
-Type=oneshot
-ExecStart=-/opt/isopod/bin/isopod-epd show oob
