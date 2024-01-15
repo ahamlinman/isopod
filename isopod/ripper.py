@@ -187,7 +187,7 @@ class Ripper(Controller):
         if df.free < need_free:
             log.info("%d bytes free, waiting for at least %d", df.free, need_free)
             self.status = Status.WAITING_FOR_SPACE
-            return RepollAfter(seconds=30)
+            return RepollAfter(seconds=60)
 
         return None
 
