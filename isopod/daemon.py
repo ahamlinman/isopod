@@ -76,10 +76,11 @@ def main(workdir, logdir, device, target, min_free_bytes, journal_ddrescue_outpu
         log.critical("Isopod needs these installed to rip and send discs")
         sys.exit(1)
 
-    if isopod.linux.get_diskseq(device) is None:
-        log.critical("%s has no diskseq property in udev", device)
+    diskseq = isopod.linux.get_diskseq(device)
+    if diskseq is None or int(diskseq) == 0:
+        log.critical("%s does not have a valid diskseq in udev", device)
         log.critical("Isopod will behave erratically in this configuration")
-        log.critical("Try a newer kernel, systemd, udev, etc.")
+        log.critical("Try a newer Linux kernel (5.15+) and/or udev")
         sys.exit(1)
 
     workdir = os.path.abspath(workdir)
