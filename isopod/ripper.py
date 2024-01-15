@@ -169,7 +169,8 @@ class Ripper(Controller):
                 return False
 
     def _check_min_free_space(self) -> Optional[Result]:
-        with open(self._device.device_node, "rb") as blk:  # type: ignore
+        assert self._device.device_node is not None
+        with open(self._device.device_node, "rb") as blk:
             disc_size = blk.seek(0, io.SEEK_END)
             need_free = disc_size + self.min_free_bytes
 

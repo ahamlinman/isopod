@@ -61,10 +61,9 @@ class Reporter(Controller):
         if self._displayed == self._desired:
             return Reconciled()
 
-        # Many ripper updates come about through user action, so they deserve
-        # the limited refresh cycles more than disc count changes. If the only
-        # change is in the disc count, defer it until the bucket is filled to
-        # capacity, or until a status update comes in.
+        # Ripper updates (often triggered by user action) deserve the limited
+        # refresh cycles more than disc count updates. Defer the latter until we
+        # have full burst capacity, or can combine with a status update.
         if self._desired.status == self._displayed.status:
             if (delay := self._bucket.seconds_until_full) > 0:
                 log.info("Deferring disc count update for %0.2f seconds", delay)
