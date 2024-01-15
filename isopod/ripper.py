@@ -200,21 +200,16 @@ class Ripper(Controller):
         if not self.journal_ddrescue_output:
             return DEVNULL
 
-        # TODO: The goal here is to compress and rotate the ddrescue logs to
-        # keep them under a given size without any racy copy + truncate logic,
-        # regardless of how long ddrescue runs for. Journal namespaces are...
-        # well, they're a feature of the systemd journal, with all the baggage
-        # that implies, and you can see what it's like to use them for what
-        # *should* be a simple case (journald really likes to shut down without
-        # another systemd unit actively depending on it). The only "good" things
-        # are that this works out of the box on Debian bookworm, and that I
-        # already knew enough about journal namespaces to hack this together
-        # quickly instead of doing the proper and healthy work to find a
-        # solution that doesn't contribute to a systemd monoculture.
+        # TODO: The goal is to compress and rotate ddrescue's logs to limit
+        # their size without racy copy + truncate logic, regardless of how long
+        # ddrescue runs for. Namespaced systemd journals work out of the box on
+        # Debian bookworm, and I knew enough about them in advance to hack this
+        # together quickly. They're awkward to use, though, on top of the other
+        # baggage associated with journald.
         #
-        # What I'm saying is: I'm not making it an urgent priority to rewrite
-        # this, but it's not a good way to do things, so please don't be
-        # inspired by it.
+        # I don't consider it a priority to rework this, but wouldn't recommend
+        # taking inspiration from it. There are surely better answers for this
+        # outside the systemd ecosystem.
         args = [
             "systemd-run",
             "--pipe",

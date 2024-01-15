@@ -32,17 +32,9 @@ class Controller(ABC):
     world toward a desired state upon request.
     """
 
-    # TODO: Controllers are currently implemented with a per-instance background
-    # thread, NOT because I think this is a good idea or the right way to do it.
-    # This was just the first idea I had with the semantics I wanted
-    # (re-converge your state of the world at some future point, ideally soon)
-    # that didn't seem to need some higher-level "manager" abstraction.
-    #
-    # Really, though, a higher-level "manager" seems like the right idea. At the
-    # very least, I'd like for control logic to be implemented in plain Python
-    # objects without subclassing Controller, since the start of the background
-    # thread can race with the subclass __init__ in annoying ways as the state
-    # and its setup get more complex.
+    # TODO: My first-pass implementation of controllers calls subclass methods
+    # in a per-instance background thread. There are probably better approaches,
+    # but I have no concrete need to explore them right now.
 
     def __init__(self):
         self._trigger = Event()
@@ -96,11 +88,10 @@ class Controller(ABC):
         self._thread.join()
 
     def _run(self):
-        # TODO: If the reconciler raises an exception, the controller will just
-        # break forever under Python's default thread exception behavior (print
-        # the exception and terminate only that thread). The Isopod daemon
-        # overrides the exception hook to exit the process, but if this were
-        # ever to be a proper abstraction it couldn't rely on that behavior.
+        # TODO: The Isopod daemon installs a global hook to exit the process on
+        # unhandled exceptions in threads; otherwise, Python merely logs the
+        # exception and terminates the thread. A more robust version of this
+        # abstraction wouldn't rely on a global hook to avoid silent breakage.
         while self._trigger.wait():
             if self._repoller is not None:
                 self._repoller.cancel()
