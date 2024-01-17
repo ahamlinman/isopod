@@ -20,6 +20,13 @@ complete after these discs are transferred, and this repo (TODOs and all) will
 remain available with no promise of future maintenance in the hope that it may
 inspire future work.
 
+> Arrakis teaches the attitude of the knife—chopping off what's incomplete and
+> saying: "Now, it's complete because it's ended here."
+>
+>   — from "Collected Sayings of Muad'Dib" by the Princess Irulan
+>
+>   <small>(actually from _Dune_ by Frank Herbert)</small>
+
 ## Requirements
 
 - Linux 5.15+
@@ -67,7 +74,7 @@ in order to assemble one. In general, the key elements are:
 The above being said, I will share two specific hardware-related notes:
 
 - For the Pi models that it fits, [Adafruit's case][case] is perfectly
-  compatible with their E-Ink bonnet.
+  compatible with their E-Ink Bonnet.
 - [Plugable's USB hub][hub] can safely power both the Pi and a USB optical drive
   at the same time, and sticks nicely on the bottom of the Adafruit case with
   some foam tape. The powered hub I originally had on hand could **not** do
