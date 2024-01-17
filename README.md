@@ -13,10 +13,12 @@ be subject to.
 
 Isopod is a personal project created to back up family videos that currently
 exist on DVD-Rs, before the discs [rot away](https://en.wikipedia.org/wiki/Disc_rot).
-All development and maintenance activity is focused on this goal, and the
-project will be considered complete after these discs are transferred. It is
-made available to the public in the hope that it may be useful as a basis for
-future work.
+The v1.0.0 release is the version initially shipped (literally, by mail) in
+support of this use case, and all continued development activity will be driven
+by direct feedback from this production setting. The project will be considered
+complete after these discs are transferred, and this repo (TODOs and all) will
+remain available with no promise of future maintenance in the hope that it may
+inspire future work.
 
 ## Requirements
 
