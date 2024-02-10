@@ -59,7 +59,7 @@ have been more interesting, but also harder to set up and use.)
 ### Terminal Hardware Notes
 
 The "Isopod Terminal" is a Raspberry Pi-based system fitted with the above E-Ink
-display, which I've assembled for use by non-technical users (i.e. my parents).
+display, which provides a simple user experience for ripping a series of discs.
 
 I'm intentionally omitting a formal parts list for the terminal device, to help
 actively encourage the reuse of parts you already have or can acquire secondhand
