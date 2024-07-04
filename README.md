@@ -11,14 +11,13 @@ With discs that Isopod _does_ support, you are fully responsible for ensuring
 that your use of Isopod complies with all laws, regulations, etc. that you may
 be subject to.
 
-Isopod is a personal project created to back up family videos that currently
-exist on DVD-Rs, before the discs [rot away](https://en.wikipedia.org/wiki/Disc_rot).
-The v1.0.0 release is the version initially shipped (literally, by mail) in
-support of this use case, and all continued development activity will be driven
-by direct feedback from this production setting. The project will be considered
-complete after these discs are transferred, and this repo (TODOs and all) will
-remain available with no promise of future maintenance in the hope that it may
-inspire future work.
+I created Isopod to back up family videos that previously existed solely on
+DVD-R discs, before those discs [rotted away](https://en.wikipedia.org/wiki/Disc_rot).
+The v1.0.0 release was the version that I shipped (literally, by mail) to carry
+out this effort, which was ultimately successful. I consider Isopod a finished
+project (even with its outstanding TODOs), and am keeping it available to the
+public with no promise of future maintenance in the hope that it may inspire
+future work.
 
 > Arrakis teaches the attitude of the knife—chopping off what's incomplete and
 > saying: "Now, it's complete because it's ended here."
@@ -52,9 +51,9 @@ Raspberry Pi models with a 2x20 GPIO connector. To enable this support:
 [bonnet]: https://www.adafruit.com/product/4687
 [raspi-config]: https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi#manual-install-3157124
 
-(For the record, I mostly chose E-Ink based on Adafruit's inventory at the time
-of the project. It was probably for the best, though. A "live" display could
-have been more interesting, but also harder to set up and use.)
+(I mostly chose E-Ink based on Adafruit's inventory at the time of the project.
+A "live" display could have been more interesting, but also harder to set up
+and use, so this unintentional choice may have been for the best.)
 
 ### Terminal Hardware Notes
 
@@ -71,7 +70,7 @@ in order to assemble one. In general, the key elements are:
 - A way to connect to the Internet (e.g. a Linux-compatible USB WiFi adapter if
   your Pi doesn't have built-in WiFi and you don't want to use Ethernet)
 
-The above being said, I will share two specific hardware-related notes:
+That said, I'll share two specific hardware-related notes:
 
 - For the Pi models that it fits, [Adafruit's case][case] is perfectly
   compatible with their E-Ink Bonnet.

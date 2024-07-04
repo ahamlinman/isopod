@@ -201,23 +201,21 @@ class Ripper(Controller):
         if not self.journal_ddrescue_output:
             return DEVNULL
 
-        # TODO: The goal is to compress and rotate ddrescue's logs to limit
-        # their size without racy copy + truncate logic, regardless of how long
-        # ddrescue runs for. Namespaced systemd journals work out of the box on
-        # Debian bookworm, and I knew enough about them in advance to hack this
-        # together quickly. They're awkward to use, though, on top of the other
-        # baggage associated with journald.
-        #
-        # I don't consider it a priority to rework this, but wouldn't recommend
-        # taking inspiration from it. There are surely better answers for this
-        # outside the systemd ecosystem.
+        # My desire is to compress and rotate ddrescue's logs to limit their
+        # size without racy copy + truncate logic, regardless of how long
+        # ddrescue runs for. Namespaced journald instances can be frustrating to
+        # work with, since they automatically shut down without a systemd unit
+        # depending on them. However, they work out of the box on many systems,
+        # and I knew enough about them in advance to put this together quickly.
+        # I did look into non-systemd approaches later, but didn't find one
+        # compelling enough to swap this out.
         args = [
             "systemd-run",
             "--pipe",
             "--quiet",
             "--collect",
             "--slice-inherit",
-            f"--property=LogNamespace=isopod-ripper",
+            "--property=LogNamespace=isopod-ripper",
             "systemd-cat",
             "-t",
             "ddrescue",

@@ -51,8 +51,7 @@ class Bucket:
 
         if available < 1:
             tokens_missing = 1 - available
-            fill_time = now + (self.fill_delay * tokens_missing)
-            delays.append(fill_time - now)
+            delays.append(self.fill_delay * tokens_missing)
 
         if seconds_since_take < self.burst_delay:
             ready_time = self._take_time + self.burst_delay
